@@ -1,0 +1,98 @@
+# compose.yml — Orquestación completa: MongoDB + Backend + Frontend (Reto 4).
+#
+# Se levanta desde 01-contenedores/lemoncode-challenge/solution/ con:
+#   docker compose up --build
+# y la aplicación queda disponible en http://localhost:3000
+#
+# Los build contexts apuntan a los directorios del stack de Node (../node-stack/*)
+# usando los Dockerfile que viven junto a esta solución, de modo que no se tocan
+# los fuentes originales ni se duplican configuraciones.
+
+services:
+
+  # ----------------------------------------------------------------------
+  # MongoDB: base de datos con persistencia mediante volumen con nombre.
+  # ----------------------------------------------------------------------
+  mongodb:
+    image: mongo:7.0
+    container_name: lemoncode-mongo
+    networks:
+      - lemoncode-network
+    ports:
+      - "27017:27017"
+    volumes:
+      - lemoncode-mongo-data:/data/db
+    healthcheck:
+      # mongosh viene incluido en la imagen mongo:7.0.
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand({ ping: 1 })"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    restart: unless-stopped
+
+  # ----------------------------------------------------------------------
+  # Backend Node.js (Express): API /api/classes.
+  # ----------------------------------------------------------------------
+  backend:
+    build:
+      context: ../node-stack/backend
+      dockerfile: ../../solution/backend.Dockerfile
+    image: lemoncode-backend
+    container_name: topics-api
+    networks:
+      - lemoncode-network
+    ports:
+      - "5000:5000"
+    environment:
+      # Conexión por DNS de Docker: lemoncode-mongo resuelve dentro de la red.
+      DATABASE_URL: "${DATABASE_URL:-mongodb://lemoncode-mongo:27017}"
+      DATABASE_NAME: "${DATABASE_NAME:-ClassesDb}"
+      HOST: "0.0.0.0"
+      PORT: "5000"
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    healthcheck:
+      # La API está lista cuando GET /api/classes responde 200.
+      test: ["CMD", "node", "-e", "fetch('http://localhost:5000/api/classes').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+    restart: unless-stopped
+
+  # ----------------------------------------------------------------------
+  # Frontend Node.js (Express + EJS): calendario en http://localhost:3000.
+  # ----------------------------------------------------------------------
+  frontend:
+    build:
+      context: ../node-stack/frontend
+      dockerfile: ../../solution/frontend.Dockerfile
+    image: lemoncode-frontend
+    container_name: topics-front
+    networks:
+      - lemoncode-network
+    ports:
+      - "3000:3000"
+    environment:
+      # El fetch lo hace server.js dentro del contenedor (node-fetch), por eso
+      # puede usar el hostname de Docker DNS `topics-api`, que el navegador del
+      # host no podría resolver. Ver README.md (Reto 3).
+      API_URL: "${API_URL:-http://topics-api:5000/api/classes}"
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+
+# Red compartida requerida por el ejercicio. El Reto 1 la puede crear antes
+# con las mismas etiquetas de Compose, por lo que se reutiliza sin advertencias.
+networks:
+  lemoncode-network:
+    name: lemoncode-network
+
+# Volumen con nombre: persistencia de MongoDB.
+# `docker compose down` lo conserva; `docker compose down -v` lo elimina.
+volumes:
+  lemoncode-mongo-data:
+    name: lemoncode-mongo-data
