@@ -352,23 +352,18 @@ verificación CRUD automáticamente.
 
 ## Capturas
 
-El enunciado pide dos capturas:
+Las siguientes capturas documentan la ejecución de la solución:
 
-1. **`docker compose ps`** con todos los servicios corriendo.
-2. **Aplicación completa** en `http://localhost:3000`.
+### Servicios de Docker Compose
 
-No se generaron capturas automatizadas: el entorno de revisión no dispone de
-`npx`, requisito de la herramienta de navegador disponible. La carpeta `images/`
-está preparada para alojarlas. Para capturarlas manualmente:
+`docker compose ps` muestra MongoDB y el backend saludables, junto con el
+frontend publicado en el puerto 3000.
 
-```bash
-cd 01-contenedores/lemoncode-challenge/solution
-./reto4.sh                                  # o: docker compose up --build -d
-docker compose ps > images/docker-compose-ps.txt   # o captura de pantalla
-# Abrir http://localhost:3000 en el navegador y capturar
-```
+![Servicios de Docker Compose en ejecución](images/docker-compose-ps.png)
 
-Capturas pendientes de generar manualmente:
+### Aplicación en el navegador
 
-- `images/docker-compose-ps.png` — salida de `docker compose ps`.
-- `images/app-localhost-3000.png` — calendario cargado en el navegador.
+La aplicación está disponible en `http://localhost:3000` y confirma la conexión
+con el backend.
+
+![Calendario Lemoncode cargado en localhost:3000](images/app-running.png)
