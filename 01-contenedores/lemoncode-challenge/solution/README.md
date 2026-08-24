@@ -115,6 +115,8 @@ Como MongoDB se publica en `localhost:27017`, el valor por defecto de
 ```bash
 cd 01-contenedores/lemoncode-challenge/node-stack/backend
 npm install
+DATABASE_URL=mongodb://localhost:27017 \
+DATABASE_NAME=ClassesDb \
 npm start
 ```
 

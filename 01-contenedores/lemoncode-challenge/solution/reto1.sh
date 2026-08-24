@@ -155,7 +155,10 @@ echo "   Puerto:     localhost:${MONGO_PORT}"
 echo "   Base datos: $MONGO_DB_NAME  (colección: Classes)"
 echo
 echo "👉 Para arrancar el backend EN LOCAL (desde node-stack/backend):"
-echo "   DATABASE_URL=mongodb://localhost:${MONGO_PORT} DATABASE_NAME=${MONGO_DB_NAME} npm install && npm start"
+echo "   npm install"
+echo "   DATABASE_URL=mongodb://localhost:${MONGO_PORT} \\"
+echo "   DATABASE_NAME=${MONGO_DB_NAME} \\"
+echo "   npm start"
 echo
 echo "   URL API:     http://localhost:5000/api/classes"
 echo "   REST Client: node-stack/backend/client.http"

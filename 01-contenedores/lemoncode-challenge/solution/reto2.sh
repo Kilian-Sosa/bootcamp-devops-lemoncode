@@ -169,7 +169,7 @@ echo "   API:        http://localhost:${BACKEND_PORT}/api/classes"
 echo "   MongoDB:    mongodb://${MONGO_CONTAINER}:${MONGO_PORT} (DNS de Docker)"
 echo
 
-if [ "$ACTION" = "test" ] || [ "$DEBUG" -eq 1 ]; then
+if [ "$ACTION" = "test" ]; then
   "$SCRIPT_DIR/crud-check.sh" "http://localhost:${BACKEND_PORT}"
 fi
 
