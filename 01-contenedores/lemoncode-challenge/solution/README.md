@@ -237,7 +237,7 @@ docker run -d \
 
 ### Conexión frontend ↔ backend y distinción Docker DNS vs navegador
 
-Este es el punto clave del Reto 3. El frontend **no** hace peticiones desde el
+El frontend **no** hace peticiones desde el
 navegador: `server.js` usa `node-fetch` en el **servidor** para obtener las clases
 y luego renderiza la plantilla EJS con los datos ya embebidos (`<%- JSON.stringify(classes) %>`).
 
@@ -328,26 +328,6 @@ deliberadamente concisa.
 
 Los scripts de parada aceptan `--down` (y `-v` en `reto4.sh`). El modo `--help`
 muestra el resumen de uso.
-
----
-
-## Validación
-
-Validación ejecutada el 24 de agosto de 2026 con Docker Desktop:
-
-- **Sintaxis Bash**: `bash -n` sin errores para los cuatro scripts y `crud-check.sh`.
-- **Compose**: `docker compose config` válido, las imágenes construyen y
-  `docker compose up --build -d` levanta MongoDB, backend y frontend sin advertencias.
-- **CRUD**: `crud-check.sh` verificó crear, recuperar, actualizar, borrar y obtener
-  `404` tras el borrado contra la API contenida.
-- **Integración**: una clase temporal creada en `localhost:5000` se renderizó en
-  `http://localhost:3000`, confirmando la comunicación frontend → backend.
-- **Persistencia**: la misma clase sobrevivió a `docker compose down` seguido de
-  `docker compose up --build -d`; el volumen no se eliminó y el dato temporal se limpió.
-
-En un entorno con Docker, ejecutar `./reto4.sh` desde `solution/` debe levantar
-y validar toda la pila completa (MongoDB + backend + frontend) y realizar la
-verificación CRUD automáticamente.
 
 ---
 
