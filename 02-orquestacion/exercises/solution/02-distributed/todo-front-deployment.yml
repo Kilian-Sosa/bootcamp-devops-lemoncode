@@ -1,0 +1,44 @@
+# Ejercicio 3 - Aplicación distribuida
+# Deployment para todo-front (servida por nginx en el puerto 80).
+#
+# NO se proporciona API_HOST: el ejercicio indica que ARG API_HOST se puede omitir.
+# El frontend (todo.service.ts) usa `host() = process.env.API_HOST || ""`, de modo que
+# cuando API_HOST está vacío todas las llamadas API son relativas al mismo origen ("/api/").
+# El Ingress enruta "/api" al Service todo-api (mismo origen público) => sin CORS y sin
+# filtrar DNS interno de Kubernetes al navegador.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: todo-front
+  labels:
+    app: todo-front
+    exercise: distributed
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: todo-front
+  template:
+    metadata:
+      labels:
+        app: todo-front
+    spec:
+      containers:
+        - name: todo-front
+          image: lemoncodersbc/lc-todo-front:v5-2024
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 80
+              name: http
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 10

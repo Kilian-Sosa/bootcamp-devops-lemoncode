@@ -1,0 +1,19 @@
+# Ejercicio 2 - Monolito con PostgreSQL
+# PersistentVolumeClaim que se enlaza estáticamente al PV anterior.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgres-pvc
+  labels:
+    app: postgres
+    exercise: monolith
+spec:
+  # Debe coincidir con un accessMode del PV.
+  accessModes:
+    - ReadWriteOnce
+  # Coincide con el storageClassName del PV (binding estático).
+  storageClassName: postgres-storage
+  resources:
+    requests:
+      # Debe ser <= capacity del PV (2Gi) para que el binding estático sea posible.
+      storage: 2Gi

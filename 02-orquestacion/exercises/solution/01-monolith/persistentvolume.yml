@@ -1,0 +1,28 @@
+# Ejercicio 2 - Monolito con PostgreSQL
+# PersistentVolume (creado manualmente, binding estático con el StorageClass).
+#
+# hostPath apunta a un directorio dentro del nodo de Minikube. En Minikube el pod de
+# postgres corre dentro de la VM/nodo de minikube, por lo que un hostPath del nodo
+# es accesible para el pod. Usamos /mnt/data/lemoncode-postgres (directorio del nodo).
+# Se crea vía init container en el StatefulSet para que exista aunque el nodo esté limpio.
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: postgres-pv
+  labels:
+    app: postgres
+    exercise: monolith
+spec:
+  capacity:
+    storage: 2Gi
+  # Debe coincidir con el PVC y con lo que permite el nodo de Minikube.
+  accessModes:
+    - ReadWriteOnce
+  # Coincide con el storageClassName del PVC (binding estático por identidad de clase).
+  storageClassName: postgres-storage
+  # Retain: si se borra el PVC, el PV conserva los datos (no se borra automáticamente).
+  persistentVolumeReclaimPolicy: Retain
+  hostPath:
+    # Ruta dentro del nodo de Minikube (no en la máquina host). Se crea en el nodo.
+    path: /mnt/data/lemoncode-postgres
+    type: DirectoryOrCreate

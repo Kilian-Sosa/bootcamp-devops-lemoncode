@@ -1,0 +1,23 @@
+# Ejercicio 2 - Monolito con PostgreSQL
+# ConfigMap con las variables de entorno que necesita todo-app.
+#
+# Las variables DB_* son obligatorias para que la app conecte con PostgreSQL vía
+# descubrimiento de servicios (nombre del Service "postgres"). No se usa localhost.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: todo-app-config
+  labels:
+    app: todo-app
+    exercise: monolith
+data:
+  NODE_ENV: "production"
+  PORT: "3000"
+  # DB_HOST = nombre del Service ClusterIP "postgres" (DNS interno del clúster).
+  DB_HOST: "postgres"
+  DB_USER: "postgres"
+  DB_PASSWORD: "postgres"
+  DB_PORT: "5432"
+  DB_NAME: "todos_db"
+  # El enunciado pide DB_VERSION=10.4 (versión original del dump); se pasa a la app.
+  DB_VERSION: "10.4"

@@ -1,0 +1,48 @@
+# Ejercicio 1 - Monolito en memoria
+# Deployment para todo-app (persistencia en memoria).
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: todo-app
+  labels:
+    app: todo-app
+    exercise: monolith-in-mem
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: todo-app
+  template:
+    metadata:
+      labels:
+        app: todo-app
+    spec:
+      containers:
+        - name: todo-app
+          # Imagen versionada de Lemoncode (no :latest). Monolito con persistencia en memoria.
+          image: lemoncodersbc/lc-todo-monolith:v5-2024
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 3000
+              name: http
+          env:
+            # NODE_ENV: cualquier valor que no sea "test" (en "test" la app no levanta el listener).
+            - name: NODE_ENV
+              value: "production"
+            # PORT: puerto por el que escucha el contenedor (3000 por defecto en la imagen).
+            - name: PORT
+              value: "3000"
+          # Sonda de disponibilidad basada en el endpoint real /live/ que expone la app.
+          # Es un endpoint sencillo y fiable implementado en src/app.ts; no es un endpoint inventado.
+          readinessProbe:
+            httpGet:
+              path: /live/
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /live/
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 10

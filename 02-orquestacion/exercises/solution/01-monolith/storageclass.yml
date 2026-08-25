@@ -1,0 +1,32 @@
+# Ejercicio 2 - Monolito con PostgreSQL
+# StorageClass.
+#
+# NOTA SOBRE LA AMBIGÜEDAD DEL ENUNCIADO:
+# El enunciado pide "StorageClass para el aprovisionamiento dinámico" Y a la vez
+# crear explícitamente un PersistentVolume Y un PersistentVolumeClaim.
+# En un aprovisionamiento dinámico puro, el PV lo crearía automáticamente el
+# provisionador (provisioner) del StorageClass; el PV escrito a mano sobraría.
+#
+# En este ejercicio de formación priorizamos cumplir literalmente con los recursos
+# solicitados (StorageClass + PV + PVC), por lo que implementamos un BINDING ESTÁTICO
+# con identidad de StorageClass: PV y PVC comparten el mismo storageClassName.
+# Esto NO es aprovisionamiento dinámico real: el PV está creado manualmente y el PVC
+# se enlaza a él por tamaño/modo/nombre de clase. El aprovisionamiento dinámico real
+# omitiría el PersistentVolume de este directorio y dejaría que el provisionador lo
+# crease. Ver README.md para más detalle.
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: postgres-storage
+  labels:
+    app: postgres
+    exercise: monolith
+# Sin provisioner: usamos binding estático (PV escrito a mano). No es dinámico real.
+provisioner: kubernetes.io/no-provisioner
+# Immediate: el PVC se enlaza al PV manual en cuanto se crea (binding estático).
+# WaitForFirstConsumer retrasaría el binding hasta que se programe un pod que lo
+# consuma, lo que rompería el orden del script (esperar PVC Bound antes del StatefulSet).
+# Para un PV manual en un clúster local de un solo nodo (Minikube), Immediate es lo
+# correcto y predecible.
+volumeBindingMode: Immediate
+reclaimPolicy: Retain

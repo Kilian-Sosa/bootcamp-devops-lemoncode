@@ -1,0 +1,57 @@
+# Ejercicio 2 - Monolito con PostgreSQL
+# StatefulSet para PostgreSQL.
+#
+# Imagen: lemoncodersbc/lc-todo-monolith-psql:v5-2024
+#   Hereda de postgres:16 y añade ./todos_db.sql a docker-entrypoint-initdb.d,
+#   de modo que al inicializar un volumen vacío crea la BD "todos_db" y su esquema
+#   + datos semilla (3 todos). Por eso NO hace falta hacer exec de SQL a mano.
+#
+# postgres:16 requiere POSTGRES_PASSWORD; se inyecta desde el ConfigMap (valor "postgres").
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgres
+  labels:
+    app: postgres
+    exercise: monolith
+spec:
+  serviceName: postgres
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres
+  template:
+    metadata:
+      labels:
+        app: postgres
+    spec:
+      # initContainer para asegurar permisos del directorio de datos en el hostPath
+      # del nodo de Minikube (se crea como root; postgres:16 corre como UID 999).
+      # No cambia el comportamiento funcional: sólo deja el volumen listo para Postgres.
+      initContainers:
+        - name: init-volume
+          image: busybox:1.36
+          command: ['sh', '-c', 'chown -R 999:999 /var/lib/postgresql/data && chmod 700 /var/lib/postgresql/data']
+          volumeMounts:
+            - name: postgres-data
+              mountPath: /var/lib/postgresql/data
+      containers:
+        - name: postgres
+          image: lemoncodersbc/lc-todo-monolith-psql:v5-2024
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 5432
+              name: postgres
+          envFrom:
+            # POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_DB desde el ConfigMap.
+            - configMapRef:
+                name: postgres-config
+          volumeMounts:
+            - name: postgres-data
+              # Punto estándar de postgres:16 donde se almacenan los datos del clúster PG.
+              # docker-entrypoint-initdb.d sólo se ejecuta si este directorio está vacío.
+              mountPath: /var/lib/postgresql/data
+      volumes:
+        - name: postgres-data
+          persistentVolumeClaim:
+            claimName: postgres-pvc

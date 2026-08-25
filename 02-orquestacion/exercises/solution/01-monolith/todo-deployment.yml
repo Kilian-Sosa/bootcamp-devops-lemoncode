@@ -1,0 +1,43 @@
+# Ejercicio 2 - Monolito con PostgreSQL
+# Deployment para todo-app (monolito con persistencia en PostgreSQL).
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: todo-app
+  labels:
+    app: todo-app
+    exercise: monolith
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: todo-app
+  template:
+    metadata:
+      labels:
+        app: todo-app
+    spec:
+      containers:
+        - name: todo-app
+          # Imagen versionada de Lemoncode (no :latest). Monolito con acceso a BD.
+          image: lemoncodersbc/lc-todo-monolith-db:v5-2024
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 3000
+              name: http
+          envFrom:
+            # Toda la configuración (incluidas las DB_* obligatorias) desde el ConfigMap.
+            - configMapRef:
+                name: todo-app-config
+          readinessProbe:
+            httpGet:
+              path: /live/
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /live/
+              port: http
+            initialDelaySeconds: 20
+            periodSeconds: 10

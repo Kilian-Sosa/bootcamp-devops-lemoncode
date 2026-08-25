@@ -1,0 +1,19 @@
+# Ejercicio 1 - Monolito en memoria
+# Servicio tipo LoadBalancer para acceder a todo-app desde fuera del clúster.
+apiVersion: v1
+kind: Service
+metadata:
+  name: todo-app
+  labels:
+    app: todo-app
+    exercise: monolith-in-mem
+spec:
+  type: LoadBalancer
+  selector:
+    # Debe coincidir con las etiquetas del Pod template del Deployment.
+    app: todo-app
+  ports:
+    - name: http
+      port: 80
+      targetPort: http   # name del containerPort del Deployment
+      protocol: TCP

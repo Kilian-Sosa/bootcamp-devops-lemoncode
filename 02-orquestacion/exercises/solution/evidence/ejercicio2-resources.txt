@@ -1,0 +1,39 @@
+# Ejercicio 2 - evidencia de recursos (2026-08-25T10:05:20Z)
+## Namespace: lemoncode-ej2
+
+### StorageClass
+NAME               PROVISIONER                    RECLAIMPOLICY   VOLUMEBINDINGMODE   ALLOWVOLUMEEXPANSION   AGE
+postgres-storage   kubernetes.io/no-provisioner   Retain          Immediate           false                  83s
+
+### PersistentVolume
+NAME          CAPACITY   ACCESS MODES   RECLAIM POLICY   STATUS   CLAIM                        STORAGECLASS       VOLUMEATTRIBUTESCLASS   REASON   AGE   VOLUMEMODE
+postgres-pv   2Gi        RWO            Retain           Bound    lemoncode-ej2/postgres-pvc   postgres-storage   <unset>                          83s   Filesystem
+
+### PersistentVolumeClaim
+NAME           STATUS   VOLUME        CAPACITY   ACCESS MODES   STORAGECLASS       VOLUMEATTRIBUTESCLASS   AGE   VOLUMEMODE
+postgres-pvc   Bound    postgres-pv   2Gi        RWO            postgres-storage   <unset>                 83s   Filesystem
+
+### StatefulSet / Deployment / Pods / Services
+NAME       READY   AGE   CONTAINERS   IMAGES
+postgres   1/1     83s   postgres     lemoncodersbc/lc-todo-monolith-psql:v5-2024
+
+NAME       READY   UP-TO-DATE   AVAILABLE   AGE   CONTAINERS   IMAGES                                      SELECTOR
+todo-app   1/1     1            1           52s   todo-app     lemoncodersbc/lc-todo-monolith-db:v5-2024   app=todo-app
+
+NAME                        READY   STATUS        RESTARTS   AGE   IP            NODE                      NOMINATED NODE   READINESS GATES
+postgres-0                  1/1     Running       0          18s   10.244.0.11   lemoncode-orchestration   <none>           <none>
+todo-app-64c958df7f-7kc98   1/1     Terminating   0          32s   10.244.0.10   lemoncode-orchestration   <none>           <none>
+todo-app-7cb7677855-dr64g   1/1     Running       0          17s   10.244.0.12   lemoncode-orchestration   <none>           <none>
+
+NAME       TYPE           CLUSTER-IP       EXTERNAL-IP   PORT(S)        AGE   SELECTOR
+postgres   ClusterIP      10.99.246.189    <none>        5432/TCP       84s   app=postgres
+todo-app   LoadBalancer   10.103.141.246   127.0.0.1     80:30382/TCP   53s   app=todo-app
+
+### URL de acceso
+http://127.0.0.1
+
+### GET /api/ (respuesta de la app)
+[{"title":"Ejercicio1-K8s","completed":false,"id":1787652168968,"dueDate":"2026-01-01T00:00:00.000Z"},{"title":"Ejercicio1-K8s","completed":false,"id":1787652205810,"dueDate":"2026-01-01T00:00:00.000Z"},{"title":"Persist-K8s-Ej2","completed":false,"id":1787652285677,"dueDate":"2026-01-01T00:00:00.000Z"},{"title":"Persist-K8s-Ej2","completed":false,"id":1787652301316,"dueDate":"2026-01-01T00:00:00.000Z"}]
+### Conteo de filas en todos (psql directo)
+     3
+

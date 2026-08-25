@@ -1,0 +1,41 @@
+# Ejercicio 3 - Aplicación distribuida
+# Deployment para todo-api (express/node, puerto 3000, persistencia en memoria).
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: todo-api
+  labels:
+    app: todo-api
+    exercise: distributed
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: todo-api
+  template:
+    metadata:
+      labels:
+        app: todo-api
+    spec:
+      containers:
+        - name: todo-api
+          image: lemoncodersbc/lc-todo-api:v5-2024
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 3000
+              name: http
+          envFrom:
+            - configMapRef:
+                name: todo-api-config
+          readinessProbe:
+            httpGet:
+              path: /live/
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /live/
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 10
