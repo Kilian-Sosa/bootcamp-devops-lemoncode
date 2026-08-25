@@ -233,8 +233,11 @@ kubectl get pvc "$PVC_NAME" -n "$NAMESPACE"
 # ---------------------------------------------------------------------------
 # 11. Obtener URL de acceso y validar app/API
 # ---------------------------------------------------------------------------
-log "Obteniendo URL de acceso (minikube service)..."
-APP_URL="$(minikube --profile "$MINIKUBE_PROFILE" service "$APP_SERVICE" -n "$NAMESPACE" --url 2>/dev/null || echo "")"
+log "Obteniendo URL de acceso del LoadBalancer..."
+# Con `minikube tunnel` activo, el Service recibe una IP externa local. Evitamos
+# `minikube service --url`, que puede quedarse en primer plano con el driver Docker.
+EXTERNAL_IP="$(kubectl get svc "$APP_SERVICE" -n "$NAMESPACE" -o jsonpath='{.status.loadBalancer.ingress[0].ip}' 2>/dev/null || echo "")"
+APP_URL="${EXTERNAL_IP:+http://$EXTERNAL_IP}"
 if [[ -n "$APP_URL" ]]; then
   ok "URL de acceso: $APP_URL"
 
@@ -254,7 +257,7 @@ if [[ -n "$APP_URL" ]]; then
     kubectl logs -n "$NAMESPACE" -l app="$APP_DEPLOYMENT" --tail=40 || true
   fi
 else
-  warn "No se pudo obtener la URL. Usa: minikube --profile $MINIKUBE_PROFILE service $APP_SERVICE -n $NAMESPACE --url"
+  warn "El LoadBalancer aún no tiene External-IP. Ejecuta 'minikube --profile $MINIKUBE_PROFILE tunnel' y reintenta."
 fi
 
 # ---------------------------------------------------------------------------

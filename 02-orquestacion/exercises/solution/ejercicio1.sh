@@ -131,12 +131,13 @@ kubectl get svc "$SERVICE" -n "$NAMESPACE"
 # ---------------------------------------------------------------------------
 # 5. Obtener URL de acceso (LoadBalancer en Minikube)
 # ---------------------------------------------------------------------------
-log "Obteniendo URL de acceso (minikube service)..."
-APP_URL="$(minikube --profile "$MINIKUBE_PROFILE" service "$SERVICE" -n "$NAMESPACE" --url 2>/dev/null || echo "")"
+log "Obteniendo URL de acceso del LoadBalancer..."
+# Con `minikube tunnel` activo, el Service recibe una IP externa local. Evitamos
+# `minikube service --url`, que puede quedarse en primer plano con el driver Docker.
+EXTERNAL_IP="$(kubectl get svc "$SERVICE" -n "$NAMESPACE" -o jsonpath='{.status.loadBalancer.ingress[0].ip}' 2>/dev/null || echo "")"
+APP_URL="${EXTERNAL_IP:+http://$EXTERNAL_IP}"
 if [[ -z "$APP_URL" ]]; then
-  warn "No se pudo obtener la URL automáticamente."
-  warn "Ejecuta manualmente: minikube --profile $MINIKUBE_PROFILE service $SERVICE -n $NAMESPACE"
-  warn "O bien: minikube --profile $MINIKUBE_PROFILE tunnel (en otra terminal) y usa el External-IP del Service."
+  warn "El LoadBalancer aún no tiene External-IP. Ejecuta 'minikube --profile $MINIKUBE_PROFILE tunnel' y reintenta."
 else
   ok "URL de acceso: $APP_URL"
 fi
@@ -180,8 +181,8 @@ if [[ -n "$APP_URL" ]]; then
   fi
 
   log "Validando que la UI (HTML) se sirve en / ..."
-  if curl -sf "$APP_URL/" 2>/dev/null | grep -qi "Todos App"; then
-    ok "La UI se sirve correctamente (HTML con 'Todos App')."
+  if curl -sf "$APP_URL/" 2>/dev/null | grep -qi '<div id="root"></div>'; then
+    ok "La UI se sirve correctamente (HTML con el contenedor root de React)."
   else
     warn "No se encontró el HTML esperado en /."
   fi

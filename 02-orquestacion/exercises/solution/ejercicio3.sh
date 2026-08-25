@@ -189,16 +189,13 @@ for _ in $(seq 1 60); do
   sleep 2
 done
 
-# Resolver la IP de acceso: si el Ingress no tiene IP asignada, usar la IP del nodo Minikube.
-MINIKUBE_IP="$(minikube --profile "$MINIKUBE_PROFILE" ip 2>/dev/null || echo "")"
+# Resolver la IP de acceso. Con el driver Docker la IP privada del nodo no suele
+# ser accesible desde Windows; el túnel de Minikube expone el Ingress en 127.0.0.1.
 if [[ -n "$ADDR" ]]; then
   ACCESS_IP="$ADDR"
-elif [[ -n "$MINIKUBE_IP" ]]; then
-  ACCESS_IP="$MINIKUBE_IP"
-  warn "El Ingress no reporta IP en .status.loadBalancer; se usará la IP del nodo Minikube: $ACCESS_IP"
 else
-  ACCESS_IP=""
-  warn "No se pudo determinar la IP de acceso."
+  ACCESS_IP="127.0.0.1"
+  warn "El Ingress no reporta IP; se usará 127.0.0.1 mediante 'minikube --profile $MINIKUBE_PROFILE tunnel'."
 fi
 
 if [[ -n "$ACCESS_IP" ]]; then
