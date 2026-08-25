@@ -180,7 +180,10 @@ log "Aplicando Ingress..."
 kubectl --context "$MINIKUBE_PROFILE" apply -f "$MANIFEST_DIR/ingress.yml" -n "$NAMESPACE"
 
 log "Esperando a que el Ingress adquiera una IP asignada..."
-for _ in $(seq 1 60); do
+# Con el driver Docker y `minikube tunnel`, ingress-nginx puede atender ya en
+# 127.0.0.1 aunque el objeto Ingress no publique status.loadBalancer. Esperamos
+# sólo un intervalo breve antes de usar ese acceso documentado.
+for _ in $(seq 1 10); do
   ADDR="$(kubectl get ingress "$INGRESS_NAME" -n "$NAMESPACE" \
     -o jsonpath='{.status.loadBalancer.ingress[0].ip}' 2>/dev/null || echo "")"
   [[ -n "$ADDR" && "$ADDR" != "" ]] && break
@@ -189,13 +192,15 @@ for _ in $(seq 1 60); do
   sleep 2
 done
 
-# Resolver la IP de acceso. Con el driver Docker la IP privada del nodo no suele
-# ser accesible desde Windows; el túnel de Minikube expone el Ingress en 127.0.0.1.
+# Con el driver Docker, .status.loadBalancer puede publicar la IP privada del nodo
+# (por ejemplo 192.168.49.2), que no es accesible desde Windows. El túnel de
+# Minikube publica Ingress en 127.0.0.1, así que es el único canal de validación
+# fiable para este perfil independientemente del valor informado por el objeto.
+ACCESS_IP="127.0.0.1"
 if [[ -n "$ADDR" ]]; then
-  ACCESS_IP="$ADDR"
+  log "El Ingress informa la IP interna $ADDR; se validará mediante el túnel en $ACCESS_IP."
 else
-  ACCESS_IP="127.0.0.1"
-  warn "El Ingress no reporta IP; se usará 127.0.0.1 mediante 'minikube --profile $MINIKUBE_PROFILE tunnel'."
+  warn "El Ingress no reporta IP; se usará $ACCESS_IP mediante 'minikube --profile $MINIKUBE_PROFILE tunnel'."
 fi
 
 if [[ -n "$ACCESS_IP" ]]; then

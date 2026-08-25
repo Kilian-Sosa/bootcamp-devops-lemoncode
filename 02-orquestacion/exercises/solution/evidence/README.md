@@ -10,6 +10,6 @@ contra un clúster Minikube. Los archivos se crean automáticamente:
 - `ejercicio3-ingress.txt`    — generado por `./ejercicio3.sh`
 
 > IMPORTANTE: estos ficheros **sólo existen tras ejecutar los scripts** contra un
-> clúster. No se incluye ninguna evidencia fabricada. Si este directorio sólo
-> contiene este `README.md` significa que los scripts aún no se han ejecutado en un
-> entorno con Minikube (ver "Validaciones pendientes" en el README superior).
+> clúster. No se incluye ninguna evidencia fabricada. En esta entrega contienen la
+> ejecución real del 25 de agosto de 2026 en el perfil
+> `lemoncode-orchestration`; el README superior describe las comprobaciones.

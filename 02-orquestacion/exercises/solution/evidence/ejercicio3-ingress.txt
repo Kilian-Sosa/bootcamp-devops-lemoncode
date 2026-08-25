@@ -1,0 +1,22 @@
+# Ejercicio 3 - evidencia de Ingress (2026-08-25T12:12:30Z)
+NAME           CLASS   HOSTS   ADDRESS        PORTS   AGE
+todo-ingress   nginx   *       192.168.49.2   80      124m
+
+Name:             todo-ingress
+Labels:           app=todo-app
+                  exercise=distributed
+Namespace:        lemoncode-ej3
+Address:          192.168.49.2
+Ingress Class:    nginx
+Default backend:  <default>
+Rules:
+  Host        Path  Backends
+  ----        ----  --------
+  *           
+              /      todo-front:80 (10.244.0.16:80)
+              /api   todo-api:80 (10.244.0.15:3000)
+Annotations:  <none>
+Events:       <none>
+
+NAME    CONTROLLER             PARAMETERS   AGE
+nginx   k8s.io/ingress-nginx   <none>       161m

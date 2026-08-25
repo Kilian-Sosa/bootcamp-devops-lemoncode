@@ -29,8 +29,24 @@ PG_STATEFULSET="postgres"
 PG_SERVICE="postgres"
 APP_DEPLOYMENT="todo-app"
 APP_SERVICE="todo-app"
+VALIDATION_PORT="18082"
 DEBUG=0
 ACTION="apply"
+
+PORT_FORWARD_PID=""
+stop_port_forward() { [[ -n "$PORT_FORWARD_PID" ]] && kill "$PORT_FORWARD_PID" 2>/dev/null || true; }
+trap stop_port_forward EXIT
+
+start_port_forward() {
+  kubectl --context "$MINIKUBE_PROFILE" -n "$NAMESPACE" port-forward "service/$APP_SERVICE" "$VALIDATION_PORT:80" >/dev/null 2>&1 &
+  PORT_FORWARD_PID=$!
+  for _ in $(seq 1 30); do
+    curl -sf "http://127.0.0.1:$VALIDATION_PORT/live/" >/dev/null 2>&1 && return 0
+    sleep 1
+  done
+  err "No se pudo abrir el port-forward de $NAMESPACE/$APP_SERVICE en $VALIDATION_PORT."
+  exit 1
+}
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -39,6 +55,24 @@ log()  { printf '\033[1;34m▶\033[0m %s\n' "$*"; }
 ok()   { printf '\033[1;32m✓\033[0m %s\n' "$*"; }
 warn() { printf '\033[1;33m⚠\033[0m %s\n' "$*" >&2; }
 err()  { printf '\033[1;31m✗\033[0m %s\n' "$*" >&2; }
+
+postgres_count_for_title() {
+  kubectl --context "$MINIKUBE_PROFILE" exec -n "$NAMESPACE" "$PG_STATEFULSET-0" -- \
+    psql -U postgres -d todos_db -t -c \
+    "SELECT count(*) FROM todos WHERE title='$1';" 2>/dev/null | tr -d '[:space:]'
+}
+
+assert_postgres_title() {
+  local count
+  count="$(postgres_count_for_title "$1" || echo "ERROR")"
+  if [[ "$count" =~ ^[0-9]+$ ]] && (( count > 0 )); then
+    ok "PostgreSQL confirma el TODO de control ($2): $count fila(s)."
+    PG_CHECK="$count"
+  else
+    err "PostgreSQL no contiene el TODO de control ($2)."
+    exit 1
+  fi
+}
 
 kc() {
   if [[ "$DEBUG" -eq 1 ]]; then
@@ -233,13 +267,11 @@ kubectl get pvc "$PVC_NAME" -n "$NAMESPACE"
 # ---------------------------------------------------------------------------
 # 11. Obtener URL de acceso y validar app/API
 # ---------------------------------------------------------------------------
-log "Obteniendo URL de acceso del LoadBalancer..."
-# Con `minikube tunnel` activo, el Service recibe una IP externa local. Evitamos
-# `minikube service --url`, que puede quedarse en primer plano con el driver Docker.
-EXTERNAL_IP="$(kubectl get svc "$APP_SERVICE" -n "$NAMESPACE" -o jsonpath='{.status.loadBalancer.ingress[0].ip}' 2>/dev/null || echo "")"
-APP_URL="${EXTERNAL_IP:+http://$EXTERNAL_IP}"
+log "Abriendo canal de validación exclusivo para $NAMESPACE/$APP_SERVICE..."
+start_port_forward
+APP_URL="http://127.0.0.1:$VALIDATION_PORT"
 if [[ -n "$APP_URL" ]]; then
-  ok "URL de acceso: $APP_URL"
+  ok "URL de validación: $APP_URL"
 
   log "Validando /live/ de todo-app..."
   if curl -sf "$APP_URL/live/" >/dev/null 2>&1; then
@@ -256,8 +288,6 @@ if [[ -n "$APP_URL" ]]; then
     warn "GET /api/ no respondió. Revisa logs de todo-app y conectividad con Postgres."
     kubectl logs -n "$NAMESPACE" -l app="$APP_DEPLOYMENT" --tail=40 || true
   fi
-else
-  warn "El LoadBalancer aún no tiene External-IP. Ejecuta 'minikube --profile $MINIKUBE_PROFILE tunnel' y reintenta."
 fi
 
 # ---------------------------------------------------------------------------
@@ -268,14 +298,16 @@ if [[ -n "$APP_URL" ]]; then
 
   # 12a. Crear un TODO de control a través de la app (escribe en Postgres).
   log "Creando TODO de control para la prueba de persistencia..."
+  TEST_TITLE="Persist-K8s-Ej2-$(date +%s)"
   curl -sf -X POST "$APP_URL/api/" \
     -H 'Content-Type: application/json' \
-    -d '{"title":"Persist-K8s-Ej2","completed":false,"dueDate":"2026-01-01T00:00:00.000Z"}' \
-    >/dev/null 2>&1 || warn "POST no completado (continuando)."
+    -d "{\"title\":\"$TEST_TITLE\",\"completed\":false,\"dueDate\":\"2026-01-01T00:00:00.000Z\"}" \
+    >/dev/null 2>&1 || { err "POST de persistencia falló."; exit 1; }
 
   log "TODOs actuales vía API antes de recrear Postgres:"
   BEFORE="$(curl -sf "$APP_URL/api/" 2>/dev/null || echo "ERROR")"
   ok "Antes: $BEFORE"
+  assert_postgres_title "$TEST_TITLE" "antes de reiniciar PostgreSQL"
 
   # 12b. Recrear el pod de Postgres SIN borrar PVC/PV.
   log "Recreando el pod de PostgreSQL (sin tocar PVC/PV)..."
@@ -296,6 +328,13 @@ if [[ -n "$APP_URL" ]]; then
     kubectl rollout status "deployment/$APP_DEPLOYMENT" -n "$NAMESPACE" --timeout=180s
   fi
 
+  # El port-forward a un Service puede cerrarse al reemplazar el único endpoint.
+  # Volvemos a abrirlo para que la comprobación posterior siga llegando a este
+  # Service y namespace, nunca al endpoint compartido de otro LoadBalancer.
+  stop_port_forward
+  PORT_FORWARD_PID=""
+  start_port_forward
+
   # Esperar a que la app vuelva a poder servir.
   log "Esperando a que todo-app vuelva a servir..."
   for _ in $(seq 1 30); do
@@ -308,23 +347,14 @@ if [[ -n "$APP_URL" ]]; then
   AFTER="$(curl -sf "$APP_URL/api/" 2>/dev/null || echo "ERROR")"
   ok "Después: $AFTER"
 
-  if [[ "$AFTER" != "ERROR" ]] && echo "$AFTER" | grep -q "Persist-K8s-Ej2"; then
+  if [[ "$AFTER" != "ERROR" ]] && echo "$AFTER" | grep -q "$TEST_TITLE"; then
     ok "PERSISTENCIA VERIFICADA: el TODO de control sobrevive a la recreación del pod de Postgres."
   else
-    warn "No se confirmó el TODO de control tras recrear el pod."
-    warn "Verifica manualmente que el PVC sigue Bound y no se borró."
+    err "La API no contiene el TODO de control tras recrear PostgreSQL."
+    exit 1
   fi
 
-  # Verificación directa en la BD.
-  log "Verificación directa en PostgreSQL del TODO de control..."
-  PG_CHECK="$(kubectl exec -n "$NAMESPACE" "$PG_STATEFULSET-0" -- \
-    psql -U postgres -d todos_db -t -c \
-    "SELECT count(*) FROM todos WHERE title='Persist-K8s-Ej2';" 2>/dev/null || echo "ERROR")"
-  if [[ "$PG_CHECK" != "ERROR" ]] && [[ -n "$PG_CHECK" ]]; then
-    ok "PostgreSQL confirma el TODO de control: $(echo "$PG_CHECK" | tr -d '[:space:]') fila(s)."
-  else
-    warn "No se pudo verificar directamente en PostgreSQL."
-  fi
+  assert_postgres_title "$TEST_TITLE" "después de reiniciar PostgreSQL"
 fi
 
 # ---------------------------------------------------------------------------
@@ -360,8 +390,14 @@ mkdir -p "$EVIDENCE_DIR"
   echo "### GET /api/ (respuesta de la app)"
   curl -sf "$APP_URL/api/" 2>/dev/null || echo "(sin respuesta)"
   echo
+  echo "### TODO de control de persistencia"
+  echo "${TEST_TITLE:-(no ejecutado)}"
+  echo
+  echo "### Conteo exacto del TODO de control (psql directo)"
+  echo "${PG_CHECK:-(no ejecutado)}"
+  echo
   echo "### Conteo de filas en todos (psql directo)"
-  kubectl exec -n "$NAMESPACE" "$PG_STATEFULSET-0" -- psql -U postgres -d todos_db -t -c "SELECT count(*) FROM todos;" 2>/dev/null || echo "(error)"
+  kubectl --context "$MINIKUBE_PROFILE" exec -n "$NAMESPACE" "$PG_STATEFULSET-0" -- psql -U postgres -d todos_db -t -c "SELECT count(*) FROM todos;" 2>/dev/null || echo "(error)"
 } > "$EVIDENCE_DIR/ejercicio2-resources.txt"
 ok "Evidencia: $EVIDENCE_DIR/ejercicio2-resources.txt"
 
@@ -378,6 +414,6 @@ ok "Evidencia de almacenamiento: $EVIDENCE_DIR/ejercicio2-storage.txt"
 
 echo
 ok "Ejercicio 2 completado."
-echo "  Acceso: ${APP_URL:-(ver 'minikube --profile $MINIKUBE_PROFILE service $APP_SERVICE -n $NAMESPACE --url')}"
+echo "  Validación local: $APP_URL (port-forward exclusivo del Service)"
 echo "  Limpieza (conserva datos): ./ejercicio2.sh cleanup"
 echo "  Limpieza (destruye datos):  ./ejercicio2.sh cleanup-data"

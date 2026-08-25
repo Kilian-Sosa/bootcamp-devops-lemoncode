@@ -113,19 +113,20 @@ muestra el estado de Deployment/Pods/Service.
 
 ### Cómo acceder a la aplicación
 
-En Minikube, un `Service` de tipo `LoadBalancer` no obtiene IP externa real por
-defecto. El script obtiene la URL con:
+En Minikube con driver Docker, dos `LoadBalancer` simultáneos pueden compartir el
+endpoint local del túnel (por ejemplo, `127.0.0.1:80`). Para que la validación no
+pueda cruzar ejercicios, el script conserva el `Service` `LoadBalancer` solicitado
+pero abre un `kubectl port-forward` exclusivo para ese Service:
 
 ```bash
-minikube --profile lemoncode-orchestration service todo-app -n lemoncode-ej1 --url
+kubectl --context lemoncode-orchestration -n lemoncode-ej1 \
+  port-forward service/todo-app 18081:80
 ```
 
-> Alternativa: en otra terminal, ejecutar
-> `minikube --profile lemoncode-orchestration tunnel` y entonces el Service
-> muestra una `EXTERNAL-IP` en `kubectl get svc`. Los scripts **no** dejan un
-> túnel de Minikube en primer plano colgado: prefieren
-> `minikube --profile lemoncode-orchestration service --url`, que imprime la URL
-> sin bloquear el terminal.
+La validación automática usa `http://127.0.0.1:18081` y cierra ese proceso al
+terminar. Un `minikube tunnel` sigue siendo útil para comprobar el comportamiento
+propio de `LoadBalancer`, pero no se usa para identificar qué ejercicio atiende
+una petición HTTP.
 
 ### Validación
 
@@ -234,15 +235,19 @@ kubectl exec <postgres-pod> -n lemoncode-ej2 -- psql -U postgres -d todos_db -t 
 
 El script `ejercicio2.sh` verifica la persistencia de forma real:
 
-1. Crea un TODO de control (`Persist-K8s-Ej2`) vía `POST /api/` (escribe en Postgres).
-2. Lee los TODOS con `GET /api/` y los guarda como "antes".
-3. **Recrea el pod de PostgreSQL** con `kubectl delete pod <postgres-pod>` **sin
+1. Abre `http://127.0.0.1:18082` mediante un `port-forward` exclusivo del Service
+   `lemoncode-ej2/todo-app`.
+2. Crea un TODO de control con título único vía `POST /api/` (escribe en Postgres)
+   y exige con `psql` que el conteo exacto de ese título sea mayor que cero.
+3. Lee los TODOS con `GET /api/` y los guarda como "antes".
+4. **Recrea el pod de PostgreSQL** con `kubectl delete pod <postgres-pod>` **sin
    borrar el PVC/PV**.
-4. Espera a que el StatefulSet vuelva a estar listo y recrea también el pod de
+5. Espera a que el StatefulSet vuelva a estar listo y recrea también el pod de
    `todo-app` para que reabra la conexión Knex con Postgres (no afecta a la
    persistencia: los datos viven en Postgres, no en la app).
-5. Vuelve a leer los TODOS con `GET /api/` y confirma que el TODO de control sigue.
-6. Verifica además directamente en PostgreSQL con `psql` que la fila existe.
+6. Vuelve a leer los TODOS con `GET /api/` y exige que el TODO de control siga.
+7. Exige de nuevo con `psql` que el conteo exacto sea mayor que cero. Un resultado
+   `0` es un fallo, no una confirmación.
 
 Esto demuestra que los datos sobreviven a la recreación del pod porque viven en el
 PVC/PV, no en el contenedor.
@@ -372,13 +377,18 @@ cd solution
 
 ### URL de acceso y validación
 
-El script obtiene la IP de acceso: si el Ingress reporta IP en
-`.status.loadBalancer.ingress` la usa; si no, usa
-`minikube --profile lemoncode-orchestration ip`. Acceso:
+Con el driver Docker, `.status.loadBalancer.ingress` puede mostrar la IP privada del
+nodo, que no es accesible desde Windows. Mantén en ejecución:
+
+```bash
+minikube --profile lemoncode-orchestration tunnel
+```
+
+El script valida el Ingress mediante el endpoint publicado por ese túnel:
 
 ```
-http://<minikube-ip>/        -> frontend
-http://<minikube-ip>/api/    -> API
+http://127.0.0.1/        -> frontend
+http://127.0.0.1/api/    -> API
 ```
 
 Validación del script:
@@ -414,39 +424,19 @@ ejecutarse contra el clúster:
   y respuestas HTTP de frontend y API.
 - `evidence/ejercicio3-ingress.txt` — Ingress y IngressClass detallados.
 
-> **Estado de la evidencia en esta entrega**: los archivos de evidencia **sólo se
-> generan al ejecutar los scripts contra un clúster Minikube**. En este entorno de
-> entrega no se ha dispuesto de acceso a terminal/clúster para ejecutarlos, por lo
-> que el directorio `evidence/` puede estar vacío o no contener salidas reales. No se
-> ha fabricado ninguna evidencia. Ver la sección "Validaciones pendientes" más abajo.
+## Validación ejecutada
 
-## Validaciones pendientes (entorno sin acceso a terminal/clúster)
+El 25 de agosto de 2026 se confirmó el contexto
+`lemoncode-orchestration` antes de aplicar recursos. Se ejecutaron los tres
+ejercicios en ese perfil aislado y los archivos anteriores contienen las salidas
+reales resultantes:
 
-En el momento de la entrega, el entorno no permitió ejecutar comandos de terminal
-(cada comando de terminal era bloqueado por la política de seguridad y/o fallaba
-con `FileNotFound`). Por tanto, el trabajo **estático** está completo, pero las
-siguientes validaciones **quedan por ejecutar** en un entorno con Minikube:
+1. Ejercicio 1: Deployment disponible, salud, CRUD y UI mediante el canal exclusivo
+   `127.0.0.1:18081`.
+2. Ejercicio 2: PVC/PV `Bound`, CRUD contra `lemoncode-ej2/todo-app`, conteo directo
+   de un TODO único en PostgreSQL antes y después de recrear PostgreSQL y la app.
+3. Ejercicio 3: controlador Ingress, frontend, API y CRUD por las rutas `/` y `/api/`.
 
-1. `bash -n` sobre los tres scripts y, si está disponible, `shellcheck`.
-2. Verificar `git ls-files --stage solution/*.sh` muestra modo `100755`.
-3. `kubectl apply --dry-run=client -f` de todos los manifests.
-4. `minikube --profile lemoncode-orchestration start` y ejecución de `./ejercicio1.sh`,
-   `./ejercicio2.sh`, `./ejercicio3.sh`.
-5. Ejercicio 1: `kubectl rollout status`,
-   `minikube --profile lemoncode-orchestration service --url`, `curl /live/` y `/api/`.
-6. Ejercicio 2: PVC `Bound`, `kubectl rollout status statefulset/postgres`, verificación
-   `psql` del esquema, y **prueba de persistencia** tras recrear el pod.
-7. Ejercicio 3: addon ingress listo, `kubectl get ingress`, `curl /` y `curl /api/`.
-
-Para ejecutar todo:
-
-```bash
-cd solution
-bash -n ejercicio1.sh ejercicio2.sh ejercicio3.sh
-./ejercicio1.sh
-./ejercicio2.sh
-./ejercicio3.sh
-```
-
-Una vez ejecutados, los archivos de `evidence/` se rellenarán con salidas reales y
-podrán incluirse en la entrega.
+Las comprobaciones se volvieron a ejecutar después de corregir el enrutamiento de
+validación de los dos `LoadBalancer`; no se interpreta `127.0.0.1:80` como una
+identidad de Service.

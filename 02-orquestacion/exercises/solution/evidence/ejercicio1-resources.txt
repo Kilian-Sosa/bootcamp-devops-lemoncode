@@ -1,22 +1,22 @@
-# Ejercicio 1 - evidencia de recursos (2026-08-25T10:03:26Z)
+# Ejercicio 1 - evidencia de recursos (2026-08-25T12:08:30Z)
 ## Namespace: lemoncode-ej1
 
 ### kubectl get deployment
 NAME       READY   UP-TO-DATE   AVAILABLE   AGE   CONTAINERS   IMAGES                                   SELECTOR
-todo-app   1/1     1            1           91s   todo-app     lemoncodersbc/lc-todo-monolith:v5-2024   app=todo-app
+todo-app   1/1     1            1           9s    todo-app     lemoncodersbc/lc-todo-monolith:v5-2024   app=todo-app
 
 ### kubectl get pods
-NAME                        READY   STATUS    RESTARTS   AGE   IP           NODE                      NOMINATED NODE   READINESS GATES
-todo-app-5b46ccb45b-2rs2f   1/1     Running   0          91s   10.244.0.6   lemoncode-orchestration   <none>           <none>
+NAME                        READY   STATUS    RESTARTS   AGE   IP            NODE                      NOMINATED NODE   READINESS GATES
+todo-app-5b46ccb45b-67t97   1/1     Running   0          9s    10.244.0.27   lemoncode-orchestration   <none>           <none>
 
 ### kubectl get svc
 NAME       TYPE           CLUSTER-IP      EXTERNAL-IP   PORT(S)        AGE   SELECTOR
-todo-app   LoadBalancer   10.102.188.23   127.0.0.1     80:30123/TCP   91s   app=todo-app
+todo-app   LoadBalancer   10.98.186.222   127.0.0.1     80:30700/TCP   9s    app=todo-app
 
 ### URL de acceso
-http://127.0.0.1
+http://127.0.0.1:18081
 
 ### /live/
 true
 ### GET /api/
-[{"title":"Ejercicio1-K8s","completed":false,"id":1787652168968,"dueDate":"2026-01-01T00:00:00.000Z"},{"title":"Ejercicio1-K8s","completed":false,"id":1787652205810,"dueDate":"2026-01-01T00:00:00.000Z"}]
+[{"title":"Ejercicio1-K8s","completed":false,"id":1787659710288,"dueDate":"2026-01-01T00:00:00.000Z"}]

@@ -1,39 +1,44 @@
-# Ejercicio 2 - evidencia de recursos (2026-08-25T10:05:20Z)
+# Ejercicio 2 - evidencia de recursos (2026-08-25T12:07:40Z)
 ## Namespace: lemoncode-ej2
 
 ### StorageClass
 NAME               PROVISIONER                    RECLAIMPOLICY   VOLUMEBINDINGMODE   ALLOWVOLUMEEXPANSION   AGE
-postgres-storage   kubernetes.io/no-provisioner   Retain          Immediate           false                  83s
+postgres-storage   kubernetes.io/no-provisioner   Retain          Immediate           false                  123m
 
 ### PersistentVolume
-NAME          CAPACITY   ACCESS MODES   RECLAIM POLICY   STATUS   CLAIM                        STORAGECLASS       VOLUMEATTRIBUTESCLASS   REASON   AGE   VOLUMEMODE
-postgres-pv   2Gi        RWO            Retain           Bound    lemoncode-ej2/postgres-pvc   postgres-storage   <unset>                          83s   Filesystem
+NAME          CAPACITY   ACCESS MODES   RECLAIM POLICY   STATUS   CLAIM                        STORAGECLASS       VOLUMEATTRIBUTESCLASS   REASON   AGE    VOLUMEMODE
+postgres-pv   2Gi        RWO            Retain           Bound    lemoncode-ej2/postgres-pvc   postgres-storage   <unset>                          123m   Filesystem
 
 ### PersistentVolumeClaim
-NAME           STATUS   VOLUME        CAPACITY   ACCESS MODES   STORAGECLASS       VOLUMEATTRIBUTESCLASS   AGE   VOLUMEMODE
-postgres-pvc   Bound    postgres-pv   2Gi        RWO            postgres-storage   <unset>                 83s   Filesystem
+NAME           STATUS   VOLUME        CAPACITY   ACCESS MODES   STORAGECLASS       VOLUMEATTRIBUTESCLASS   AGE    VOLUMEMODE
+postgres-pvc   Bound    postgres-pv   2Gi        RWO            postgres-storage   <unset>                 123m   Filesystem
 
 ### StatefulSet / Deployment / Pods / Services
-NAME       READY   AGE   CONTAINERS   IMAGES
-postgres   1/1     83s   postgres     lemoncodersbc/lc-todo-monolith-psql:v5-2024
+NAME       READY   AGE     CONTAINERS   IMAGES
+postgres   1/1     8m39s   postgres     lemoncodersbc/lc-todo-monolith-psql:v5-2024
 
-NAME       READY   UP-TO-DATE   AVAILABLE   AGE   CONTAINERS   IMAGES                                      SELECTOR
-todo-app   1/1     1            1           52s   todo-app     lemoncodersbc/lc-todo-monolith-db:v5-2024   app=todo-app
+NAME       READY   UP-TO-DATE   AVAILABLE   AGE     CONTAINERS   IMAGES                                      SELECTOR
+todo-app   1/1     1            1           8m35s   todo-app     lemoncodersbc/lc-todo-monolith-db:v5-2024   app=todo-app
 
-NAME                        READY   STATUS        RESTARTS   AGE   IP            NODE                      NOMINATED NODE   READINESS GATES
-postgres-0                  1/1     Running       0          18s   10.244.0.11   lemoncode-orchestration   <none>           <none>
-todo-app-64c958df7f-7kc98   1/1     Terminating   0          32s   10.244.0.10   lemoncode-orchestration   <none>           <none>
-todo-app-7cb7677855-dr64g   1/1     Running       0          17s   10.244.0.12   lemoncode-orchestration   <none>           <none>
+NAME                        READY   STATUS    RESTARTS   AGE   IP            NODE                      NOMINATED NODE   READINESS GATES
+postgres-0                  1/1     Running   0          35s   10.244.0.25   lemoncode-orchestration   <none>           <none>
+todo-app-64c958df7f-9x5rx   1/1     Running   0          33s   10.244.0.26   lemoncode-orchestration   <none>           <none>
 
-NAME       TYPE           CLUSTER-IP       EXTERNAL-IP   PORT(S)        AGE   SELECTOR
-postgres   ClusterIP      10.99.246.189    <none>        5432/TCP       84s   app=postgres
-todo-app   LoadBalancer   10.103.141.246   127.0.0.1     80:30382/TCP   53s   app=todo-app
+NAME       TYPE           CLUSTER-IP       EXTERNAL-IP   PORT(S)        AGE     SELECTOR
+postgres   ClusterIP      10.102.250.105   <none>        5432/TCP       8m39s   app=postgres
+todo-app   LoadBalancer   10.103.239.77    127.0.0.1     80:30492/TCP   8m35s   app=todo-app
 
 ### URL de acceso
-http://127.0.0.1
+http://127.0.0.1:18082
 
 ### GET /api/ (respuesta de la app)
-[{"title":"Ejercicio1-K8s","completed":false,"id":1787652168968,"dueDate":"2026-01-01T00:00:00.000Z"},{"title":"Ejercicio1-K8s","completed":false,"id":1787652205810,"dueDate":"2026-01-01T00:00:00.000Z"},{"title":"Persist-K8s-Ej2","completed":false,"id":1787652285677,"dueDate":"2026-01-01T00:00:00.000Z"},{"title":"Persist-K8s-Ej2","completed":false,"id":1787652301316,"dueDate":"2026-01-01T00:00:00.000Z"}]
+[{"id":12,"title":"Learn Jenkins","completed":false,"order":null,"dueDate":"2020-12-04T18:37:44.234Z"},{"id":13,"title":"Learn GitLab","completed":true,"order":null,"dueDate":"2020-12-04T18:38:06.993Z"},{"id":21,"title":"Learn K8s","completed":false,"order":null,"dueDate":"2020-12-04T19:12:16.174Z"},{"id":22,"title":"Persist-K8s-Ej2","completed":false,"order":null,"dueDate":"2026-01-01T00:00:00.000Z"},{"id":23,"title":"Persist-K8s-Ej2-1787659158","completed":false,"order":null,"dueDate":"2026-01-01T00:00:00.000Z"},{"id":24,"title":"Persist-K8s-Ej2-1787659417","completed":false,"order":null,"dueDate":"2026-01-01T00:00:00.000Z"},{"id":25,"title":"Persist-K8s-Ej2-1787659544","completed":false,"order":null,"dueDate":"2026-01-01T00:00:00.000Z"},{"id":26,"title":"Persist-K8s-Ej2-1787659624","completed":false,"order":null,"dueDate":"2026-01-01T00:00:00.000Z"}]
+### TODO de control de persistencia
+Persist-K8s-Ej2-1787659624
+
+### Conteo exacto del TODO de control (psql directo)
+1
+
 ### Conteo de filas en todos (psql directo)
-     3
+     8
 

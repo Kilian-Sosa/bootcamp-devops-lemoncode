@@ -1,0 +1,51 @@
+# Ejercicio 3 - evidencia de recursos (2026-08-25T12:12:29Z)
+## Namespace: lemoncode-ej3
+
+### Deployments
+NAME         READY   UP-TO-DATE   AVAILABLE   AGE    CONTAINERS   IMAGES                                SELECTOR
+todo-front   1/1     1            1           124m   todo-front   lemoncodersbc/lc-todo-front:v5-2024   app=todo-front
+
+NAME       READY   UP-TO-DATE   AVAILABLE   AGE    CONTAINERS   IMAGES                              SELECTOR
+todo-api   1/1     1            1           124m   todo-api     lemoncodersbc/lc-todo-api:v5-2024   app=todo-api
+
+### Pods
+NAME                         READY   STATUS    RESTARTS   AGE    IP            NODE                      NOMINATED NODE   READINESS GATES
+todo-api-666b7759b5-9rlsb    1/1     Running   0          124m   10.244.0.15   lemoncode-orchestration   <none>           <none>
+todo-front-5b59cd466-69n6z   1/1     Running   0          124m   10.244.0.16   lemoncode-orchestration   <none>           <none>
+
+### Services
+NAME         TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)   AGE    SELECTOR
+todo-api     ClusterIP   10.100.1.213    <none>        80/TCP    124m   app=todo-api
+todo-front   ClusterIP   10.104.39.140   <none>        80/TCP    124m   app=todo-front
+
+### Ingress
+NAME           CLASS   HOSTS   ADDRESS        PORTS   AGE
+todo-ingress   nginx   *       192.168.49.2   80      124m
+
+Name:             todo-ingress
+Labels:           app=todo-app
+                  exercise=distributed
+Namespace:        lemoncode-ej3
+Address:          192.168.49.2
+Ingress Class:    nginx
+Default backend:  <default>
+Rules:
+  Host        Path  Backends
+  ----        ----  --------
+  *           
+              /      todo-front:80 (10.244.0.16:80)
+              /api   todo-api:80 (10.244.0.15:3000)
+Annotations:  <none>
+Events:       <none>
+
+### IngressClass
+NAME    CONTROLLER             PARAMETERS   AGE
+nginx   k8s.io/ingress-nginx   <none>       161m
+
+### IP de acceso
+127.0.0.1
+
+### GET / (frontend) primeras líneas
+<!doctype html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Document</title><script defer="defer" src="app.8f643352660e61a72f8f.js"></script><script defer="defer" src="appStyles.81bfdf260f32b489a47b.js"></script><link href="appStyles.css" rel="stylesheet"></head><body><div id="root"></div></body></html>
+### GET /api/ (API vía Ingress)
+[{"title":"Ej3-Ingress","completed":false,"id":1787652556537,"dueDate":"2026-01-01T00:00:00.000Z"},{"title":"Ej3-Ingress","completed":false,"id":1787659949487,"dueDate":"2026-01-01T00:00:00.000Z"}]

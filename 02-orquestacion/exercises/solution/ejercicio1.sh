@@ -23,8 +23,24 @@ MANIFEST_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/00-monolith-in-mem"
 EVIDENCE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/evidence"
 DEPLOYMENT="todo-app"
 SERVICE="todo-app"
+VALIDATION_PORT="18081"
 DEBUG=0
 ACTION="apply"
+
+PORT_FORWARD_PID=""
+stop_port_forward() { [[ -n "$PORT_FORWARD_PID" ]] && kill "$PORT_FORWARD_PID" 2>/dev/null || true; }
+trap stop_port_forward EXIT
+
+start_port_forward() {
+  kubectl --context "$MINIKUBE_PROFILE" -n "$NAMESPACE" port-forward "service/$SERVICE" "$VALIDATION_PORT:80" >/dev/null 2>&1 &
+  PORT_FORWARD_PID=$!
+  for _ in $(seq 1 30); do
+    curl -sf "http://127.0.0.1:$VALIDATION_PORT/live/" >/dev/null 2>&1 && return 0
+    sleep 1
+  done
+  err "No se pudo abrir el port-forward de $NAMESPACE/$SERVICE en $VALIDATION_PORT."
+  exit 1
+}
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -129,18 +145,12 @@ kubectl get pods -n "$NAMESPACE" -l app="$DEPLOYMENT"
 kubectl get svc "$SERVICE" -n "$NAMESPACE"
 
 # ---------------------------------------------------------------------------
-# 5. Obtener URL de acceso (LoadBalancer en Minikube)
+# 5. Abrir un canal de validación exclusivo para este Service
 # ---------------------------------------------------------------------------
-log "Obteniendo URL de acceso del LoadBalancer..."
-# Con `minikube tunnel` activo, el Service recibe una IP externa local. Evitamos
-# `minikube service --url`, que puede quedarse en primer plano con el driver Docker.
-EXTERNAL_IP="$(kubectl get svc "$SERVICE" -n "$NAMESPACE" -o jsonpath='{.status.loadBalancer.ingress[0].ip}' 2>/dev/null || echo "")"
-APP_URL="${EXTERNAL_IP:+http://$EXTERNAL_IP}"
-if [[ -z "$APP_URL" ]]; then
-  warn "El LoadBalancer aún no tiene External-IP. Ejecuta 'minikube --profile $MINIKUBE_PROFILE tunnel' y reintenta."
-else
-  ok "URL de acceso: $APP_URL"
-fi
+log "Abriendo canal de validación exclusivo para $NAMESPACE/$SERVICE..."
+start_port_forward
+APP_URL="http://127.0.0.1:$VALIDATION_PORT"
+ok "URL de validación: $APP_URL"
 
 # ---------------------------------------------------------------------------
 # 6. Validación a nivel HTTP (UI/API)
@@ -219,5 +229,5 @@ ok "Evidencia: $EVIDENCE_DIR/ejercicio1-resources.txt"
 
 echo
 ok "Ejercicio 1 completado."
-echo "  Acceso: ${APP_URL:-(ver 'minikube --profile $MINIKUBE_PROFILE service $SERVICE -n $NAMESPACE --url')}"
+echo "  Validación local: $APP_URL (port-forward exclusivo del Service)"
 echo "  Limpieza: ./ejercicio1.sh cleanup"
