@@ -6,6 +6,7 @@ basada en el stack de **Node.js** (`../node-stack`).
 ```
 solution/
 ├── README.md            ← esta guía
+├── images/              ← capturas de la solución
 ├── reto1.sh             ← MongoDB en Docker + backend en local
 ├── reto2.sh             ← Backend dockerizado
 ├── reto3.sh             ← Frontend dockerizado
