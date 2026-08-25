@@ -39,7 +39,7 @@ solution/
   imágenes versionadas de Lemoncode ya publicadas en Docker Hub. Útil sólo si se
   quieren construir imágenes locales.
 - **kubectl**: cliente instalado. Verificar con `kubectl version --client`.
-- **Minikube**: instalado con el perfil aprobado `lemoncode-orchestration` arrancado.
+- **Minikube**: instalado con el perfil `lemoncode-orchestration` arrancado.
   Verificar con `minikube --profile lemoncode-orchestration status`.
 - **curl**: para la validación HTTP desde los scripts.
 - **Verificación del contexto y perfil**: los tres scripts comprueban que el contexto
@@ -423,20 +423,3 @@ ejecutarse contra el clúster:
 - `evidence/ejercicio3-resources.txt` — Deployments/Pods/Services/Ingress/IngressClass
   y respuestas HTTP de frontend y API.
 - `evidence/ejercicio3-ingress.txt` — Ingress y IngressClass detallados.
-
-## Validación ejecutada
-
-El 25 de agosto de 2026 se confirmó el contexto
-`lemoncode-orchestration` antes de aplicar recursos. Se ejecutaron los tres
-ejercicios en ese perfil aislado y los archivos anteriores contienen las salidas
-reales resultantes:
-
-1. Ejercicio 1: Deployment disponible, salud, CRUD y UI mediante el canal exclusivo
-   `127.0.0.1:18081`.
-2. Ejercicio 2: PVC/PV `Bound`, CRUD contra `lemoncode-ej2/todo-app`, conteo directo
-   de un TODO único en PostgreSQL antes y después de recrear PostgreSQL y la app.
-3. Ejercicio 3: controlador Ingress, frontend, API y CRUD por las rutas `/` y `/api/`.
-
-Las comprobaciones se volvieron a ejecutar después de corregir el enrutamiento de
-validación de los dos `LoadBalancer`; no se interpreta `127.0.0.1:80` como una
-identidad de Service.
