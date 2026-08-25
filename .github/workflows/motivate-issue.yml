@@ -1,0 +1,35 @@
+# ---------------------------------------------------------------------------
+# GitHub Actions 4 (opcional, realizado) - Custom JavaScript Action "Motivate"
+#
+# Se dispara cuando una issue recibe la etiqueta `motivate`.
+# En el job se exige github.event.label.name == 'motivate' para no ejecutar
+# la accion por cada etiqueta ajena.
+#
+# Como la accion es local, primero se hace checkout del repositorio.
+# Permisos minimos: solo contents: read (la accion solo imprime por consola;
+# no necesita escribir en la issue y NO comenta la issue).
+# ---------------------------------------------------------------------------
+
+name: Motivate Issue
+
+on:
+  issues:
+    types: [labeled]
+
+permissions:
+  contents: read
+
+jobs:
+  motivate:
+    # Solo corre si la etiqueta anadida es exactamente "motivate".
+    if: github.event.label.name == 'motivate'
+    name: Print motivational message
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        # Necesario porque la accion es local (.github/actions/motivate).
+        uses: actions/checkout@v5
+
+      - name: Motivate
+        uses: ./.github/actions/motivate

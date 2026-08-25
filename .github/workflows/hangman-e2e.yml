@@ -1,0 +1,155 @@
+# ---------------------------------------------------------------------------
+# GitHub Actions 3 (opcional, realizado) - E2E con Cypress
+#
+# Disparo:
+#   - pull_request (cuando tocan hangman-front, hangman-api o hangman-e2e)
+#     -> permite validar de verdad en esta PR.
+#   - workflow_dispatch -> disparo manual.
+#
+# Ejecuta:
+#   1. checkout
+#   2. build imagen hangman-api
+#   3. build imagen hangman-front
+#   4. arrancar API (host 3001 -> contenedor 3000)
+#   5. arrancar frontend (host 8080 -> contenedor 8080) con API_URL=http://localhost:3001
+#   6. esperar a que los servicios respondan (polling real con curl, sin sleep ciego)
+#   7. ejecutar Cypress headless (npx cypress run)
+#   8. limpiar contenedores SIEMPRE (if: always())
+# ---------------------------------------------------------------------------
+
+name: Hangman E2E
+
+on:
+  pull_request:
+    paths:
+      - 'hangman-front/**'
+      - 'hangman-api/**'
+      - 'hangman-e2e/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  e2e:
+    name: Cypress E2E
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      # ---------------------------------------------------------------------
+      # Build de las imagenes (sin publicar).
+      # ---------------------------------------------------------------------
+      - name: Build hangman-api image
+        run: docker build -t hangman-api ./hangman-api
+
+      - name: Build hangman-front image
+        run: docker build -t hangman-front ./hangman-front
+
+      # ---------------------------------------------------------------------
+      # Arranque de servicios en la red e2e.
+      #   API:      host 3001 -> contenedor 3000
+      #   Frontend: host 8080 -> contenedor 8080  (API_URL=http://localhost:3001)
+      # El entry-point.sh sustituye API_URL en el bundle en tiempo de ejecucion.
+      # ---------------------------------------------------------------------
+      - name: Create E2E network
+        run: docker network create hangman-e2e
+
+      - name: Start hangman-api
+        run: |
+          docker run -d --name hangman-api \
+            --network hangman-e2e \
+            -p 3001:3000 \
+            hangman-api
+
+      - name: Start hangman-front
+        run: |
+          docker run -d --name hangman-front \
+            --network hangman-e2e \
+            -p 8080:8080 \
+            -e API_URL=http://localhost:3001 \
+            hangman-front
+
+      # ---------------------------------------------------------------------
+      # Readiness real: polling HTTP con timeout. No usa sleep ciego.
+      # API:   GET /api/topics responde 200 con el listado de topics.
+      # Front: http://localhost:8080 responde 200 (sirve index.html).
+      # ---------------------------------------------------------------------
+      - name: Wait for API
+        run: |
+          echo "Esperando al API en http://localhost:3001/api/topics ..."
+          for i in $(seq 1 60); do
+            if curl -fsS http://localhost:3001/api/topics; then
+              echo " -> API listo"
+              exit 0
+            fi
+            echo "  intento $i/60: API no listo, reintentando..."
+            sleep 2
+          done
+          echo "ERROR: el API no respondio a tiempo" >&2
+          docker logs hangman-api
+          exit 1
+
+      - name: Wait for frontend
+        run: |
+          echo "Esperando al frontend en http://localhost:8080 ..."
+          for i in $(seq 1 60); do
+            if curl -fsS http://localhost:8080 >/dev/null; then
+              echo " -> Frontend listo"
+              exit 0
+            fi
+            echo "  intento $i/60: frontend no listo, reintentando..."
+            sleep 2
+          done
+          echo "ERROR: el frontend no respondio a tiempo" >&2
+          docker logs hangman-front
+          exit 1
+
+      # ---------------------------------------------------------------------
+      # Cypress headless. El fixture solo define "npm run open" (interactivo),
+      # por eso usamos `npx cypress run` (headless).
+      # Cypress 10.4: se instala en el runner con npm ci y se ejecuta contra
+      # baseUrl http://localhost:8080 (definido en cypress.config.ts).
+      # ---------------------------------------------------------------------
+      - name: Setup Node
+        uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+          cache: 'npm'
+          cache-dependency-path: hangman-e2e/e2e/package-lock.json
+
+      - name: Install E2E dependencies
+        working-directory: hangman-e2e/e2e
+        run: npm ci
+
+      - name: Run Cypress (headless)
+        working-directory: hangman-e2e/e2e
+        run: npx cypress run
+
+      # Subir artefactos solo si fallan y se generan.
+      - name: Upload Cypress screenshots
+        if: failure()
+        uses: actions/upload-artifact@v5
+        with:
+          name: cypress-screenshots
+          path: hangman-e2e/e2e/cypress/screenshots
+          if-no-files-found: ignore
+
+      - name: Upload Cypress videos
+        if: failure()
+        uses: actions/upload-artifact@v5
+        with:
+          name: cypress-videos
+          path: hangman-e2e/e2e/cypress/videos
+          if-no-files-found: ignore
+
+      # ---------------------------------------------------------------------
+      # Limpieza SIEMPRE, incluso si Cypress falla.
+      # ---------------------------------------------------------------------
+      - name: Cleanup containers & network
+        if: always()
+        run: |
+          docker rm -f hangman-api hangman-front 2>/dev/null || true
+          docker network rm hangman-e2e 2>/dev/null || true

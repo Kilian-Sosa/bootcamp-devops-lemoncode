@@ -1,0 +1,15 @@
+name: 'Motivate'
+description: 'Imprime un mensaje motivacional por consola cuando una issue recibe la etiqueta "motivate". Usa type.fit con un fallback local si la API falla.'
+author: 'CD exercise'
+
+# runtime node24 (Node 24 tiene fetch nativo, no se necesitan dependencias
+# ni bundling con @vercel/ncc).
+runs:
+  using: 'node24'
+  main: 'index.js'
+
+# La accion solo imprime por consola; no requiere inputs ni escribe en la issue.
+inputs: {}
+outputs:
+  message:
+    description: 'Mensaje motivacional elegido (tambien se imprime por consola).'

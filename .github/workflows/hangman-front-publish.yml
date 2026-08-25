@@ -1,0 +1,71 @@
+# ---------------------------------------------------------------------------
+# GitHub Actions 2 (obligatorio) - CD: publicar imagen del frontend en GHCR
+#
+# Disparo MANUAL mediante `workflow_dispatch` (no se ejecuta en cada PR).
+# Construye hangman-front/Dockerfile y publica la imagen en GHCR usando el
+# GITHUB_TOKEN (no se commitea ningun token).
+#
+# Imagen: ghcr.io/<owner>/hangman-front
+#   - tag sha inmutable:  ghcr.io/<owner>/hangman-front:<sha-corto>
+#   - tag latest:          ghcr.io/<owner>/hangman-front:latest
+#   - tag del workflow run (por metadata-action) con el run-id.
+#
+# Permisos minimos: contents: read, packages: write.
+# ---------------------------------------------------------------------------
+
+name: Frontend Publish (GHCR)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+# Docker exige referencias en minusculas. El propietario conocido de este
+# repositorio es Kilian-Sosa, por lo que github.repository_owner no se puede
+# interpolar directamente aqui sin arriesgar una referencia invalida.
+env:
+  IMAGE_NAME: ghcr.io/kilian-sosa/hangman-front
+
+jobs:
+  publish:
+    name: Build & Publish to GHCR
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # Genera metadatos de etiquetas (sha, run-id, etc.).
+      - name: Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE_NAME }}
+          tags: |
+            type=sha,format=short
+            type=raw,value=latest
+            type=raw,value=run-${{ github.run_id }}
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build & Push image
+        uses: docker/build-push-action@v6
+        with:
+          context: hangman-front
+          file: hangman-front/Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          # La cache del registro acelera publicaciones repetidas.
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

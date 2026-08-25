@@ -1,0 +1,55 @@
+# ---------------------------------------------------------------------------
+# GitHub Actions 1 (obligatorio) - CI del frontend (hangman-front)
+#
+# Se dispara SOLO cuando se dan las dos condiciones a la vez:
+#   1. Es una pull request.
+#   2. La PR contiene cambios en el directorio `hangman-front/`.
+#   (El filtro `paths` combinado con el evento `pull_request` garantiza ambas.)
+#
+# Pasos: checkout -> setup Node -> npm ci -> build -> unit tests.
+# Los fallos de build o de unit tests deben fallar el workflow (sin
+# continue-on-error).
+# ---------------------------------------------------------------------------
+
+name: Frontend CI (hangman-front)
+
+on:
+  pull_request:
+    paths:
+      - 'hangman-front/**'
+
+# Permisos minimos: solo lectura del contenido.
+permissions:
+  contents: read
+
+jobs:
+  build-and-test:
+    name: Build & Unit Tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: hangman-front
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Node
+        uses: actions/setup-node@v5
+        with:
+          # Se valida con una version actualmente soportada; no se degrada a
+          # Node 18, que ya esta fuera de soporte.
+          node-version: '24'
+          cache: 'npm'
+          cache-dependency-path: hangman-front/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Unit Tests
+        # El script "test" del fixture ya invoca jest en modo no interactivo
+        # (jest -c ./config/test/jest.js), por lo que es seguro para CI.
+        run: npm test
