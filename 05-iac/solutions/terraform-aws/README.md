@@ -283,6 +283,6 @@ terraform destroy
 ```
 
 y verifica en la consola AWS que **no quedan** instancias EC2, IP públicas
-IPv4, VPC u otros recursos facturables. Recuerda que la IP pública IPv4 puede
-generar coste aunque la instancia esté parada; por eso conviene destruir el
-entorno por completo.
+IPv4, VPC u otros recursos facturables. Las direcciones IPv4 públicas de AWS
+pueden generar coste mientras estén asignadas a recursos, por lo que conviene
+destruir el entorno por completo al terminar.
