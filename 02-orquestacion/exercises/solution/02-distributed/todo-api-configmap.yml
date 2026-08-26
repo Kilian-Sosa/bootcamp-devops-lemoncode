@@ -1,0 +1,12 @@
+# Ejercicio 3 - Aplicación distribuida
+# ConfigMap (opcional) con las variables de entorno de todo-api.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: todo-api-config
+  labels:
+    app: todo-api
+    exercise: distributed
+data:
+  NODE_ENV: "production"
+  PORT: "3000"

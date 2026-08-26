@@ -1,0 +1,24 @@
+# Ejercicio 2 - Monolito con PostgreSQL
+# ConfigMap con la configuración de la base de datos.
+#
+# El StatefulSet de PostgreSQL consume estos valores. La imagen base es postgres:16,
+# que OBLIGA a definir POSTGRES_PASSWORD (no arranca sin él). Lo fijamos a "postgres"
+# para que coincida con DB_PASSWORD que usa la app (ver todo-configmap.yml).
+#
+# NO se define POSTGRES_DB: el script de inicialización (todos_db.sql) que la imagen
+# cocinada añade a docker-entrypoint-initdb.d ya contiene "CREATE DATABASE todos_db".
+# Si además se fijara POSTGRES_DB=todos_db, postgres:16 crearía esa BD ANTES de
+# ejecutar los scripts init, y entonces "CREATE DATABASE todos_db" del SQL fallaría
+# ("database already exists") bajo ON_ERROR_STOP=on y la inicialización abortaría.
+# Sin POSTGRES_DB, los scripts init corren contra la BD por defecto "postgres" y
+# "CREATE DATABASE todos_db" funciona. La app luego se conecta a "todos_db".
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgres-config
+  labels:
+    app: postgres
+    exercise: monolith
+data:
+  POSTGRES_USER: "postgres"
+  POSTGRES_PASSWORD: "postgres"

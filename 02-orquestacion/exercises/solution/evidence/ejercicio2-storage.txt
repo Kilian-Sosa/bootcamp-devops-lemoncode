@@ -1,0 +1,10 @@
+# Ejercicio 2 - evidencia de almacenamiento (2026-08-25T12:30:07Z)
+NAME                 PROVISIONER                    RECLAIMPOLICY   VOLUMEBINDINGMODE   ALLOWVOLUMEEXPANSION   AGE
+postgres-storage     kubernetes.io/no-provisioner   Retain          Immediate           false                  64s
+standard (default)   k8s.io/minikube-hostpath       Delete          Immediate           false                  3h
+
+NAME          CAPACITY   ACCESS MODES   RECLAIM POLICY   STATUS   CLAIM                        STORAGECLASS       VOLUMEATTRIBUTESCLASS   REASON   AGE
+postgres-pv   2Gi        RWO            Retain           Bound    lemoncode-ej2/postgres-pvc   postgres-storage   <unset>                          63s
+
+NAME           STATUS   VOLUME        CAPACITY   ACCESS MODES   STORAGECLASS       VOLUMEATTRIBUTESCLASS   AGE
+postgres-pvc   Bound    postgres-pv   2Gi        RWO            postgres-storage   <unset>                 63s

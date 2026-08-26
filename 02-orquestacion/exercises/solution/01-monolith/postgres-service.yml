@@ -1,0 +1,20 @@
+# Ejercicio 2 - Monolito con PostgreSQL
+# Service ClusterIP para que los pods de todo-app lleguen al StatefulSet de Postgres
+# mediante DNS del clúster (nombre del servicio). DB_HOST en la app = "postgres".
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres
+  labels:
+    app: postgres
+    exercise: monolith
+spec:
+  type: ClusterIP
+  selector:
+    # Debe coincidir con las etiquetas del Pod template del StatefulSet.
+    app: postgres
+  ports:
+    - name: postgres
+      port: 5432
+      targetPort: 5432
+      protocol: TCP

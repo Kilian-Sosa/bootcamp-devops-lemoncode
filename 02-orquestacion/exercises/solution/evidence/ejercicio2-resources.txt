@@ -1,0 +1,44 @@
+# Ejercicio 2 - evidencia de recursos (2026-08-25T12:30:06Z)
+## Namespace: lemoncode-ej2
+
+### StorageClass
+NAME               PROVISIONER                    RECLAIMPOLICY   VOLUMEBINDINGMODE   ALLOWVOLUMEEXPANSION   AGE
+postgres-storage   kubernetes.io/no-provisioner   Retain          Immediate           false                  63s
+
+### PersistentVolume
+NAME          CAPACITY   ACCESS MODES   RECLAIM POLICY   STATUS   CLAIM                        STORAGECLASS       VOLUMEATTRIBUTESCLASS   REASON   AGE   VOLUMEMODE
+postgres-pv   2Gi        RWO            Retain           Bound    lemoncode-ej2/postgres-pvc   postgres-storage   <unset>                          62s   Filesystem
+
+### PersistentVolumeClaim
+NAME           STATUS   VOLUME        CAPACITY   ACCESS MODES   STORAGECLASS       VOLUMEATTRIBUTESCLASS   AGE   VOLUMEMODE
+postgres-pvc   Bound    postgres-pv   2Gi        RWO            postgres-storage   <unset>                 63s   Filesystem
+
+### StatefulSet / Deployment / Pods / Services
+NAME       READY   AGE   CONTAINERS   IMAGES
+postgres   1/1     63s   postgres     lemoncodersbc/lc-todo-monolith-psql:v5-2024
+
+NAME       READY   UP-TO-DATE   AVAILABLE   AGE   CONTAINERS   IMAGES                                      SELECTOR
+todo-app   1/1     1            1           50s   todo-app     lemoncodersbc/lc-todo-monolith-db:v5-2024   app=todo-app
+
+NAME                        READY   STATUS    RESTARTS   AGE   IP            NODE                      NOMINATED NODE   READINESS GATES
+postgres-0                  1/1     Running   0          35s   10.244.0.30   lemoncode-orchestration   <none>           <none>
+todo-app-64c958df7f-m2n2d   1/1     Running   0          33s   10.244.0.31   lemoncode-orchestration   <none>           <none>
+
+NAME       TYPE           CLUSTER-IP       EXTERNAL-IP   PORT(S)        AGE   SELECTOR
+postgres   ClusterIP      10.102.225.141   <none>        5432/TCP       63s   app=postgres
+todo-app   LoadBalancer   10.97.170.2      127.0.0.1     80:31284/TCP   50s   app=todo-app
+
+### URL de acceso
+http://127.0.0.1:18082
+
+### GET /api/ (respuesta de la app)
+[{"id":12,"title":"Learn Jenkins","completed":false,"order":null,"dueDate":"2020-12-04T18:37:44.234Z"},{"id":13,"title":"Learn GitLab","completed":true,"order":null,"dueDate":"2020-12-04T18:38:06.993Z"},{"id":21,"title":"Learn K8s","completed":false,"order":null,"dueDate":"2020-12-04T19:12:16.174Z"},{"id":22,"title":"Persist-K8s-Ej2-1787660970","completed":false,"order":null,"dueDate":"2026-01-01T00:00:00.000Z"}]
+### TODO de control de persistencia
+Persist-K8s-Ej2-1787660970
+
+### Conteo exacto del TODO de control (psql directo)
+1
+
+### Conteo de filas en todos (psql directo)
+     4
+

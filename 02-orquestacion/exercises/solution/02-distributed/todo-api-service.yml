@@ -1,0 +1,18 @@
+# Ejercicio 3 - Aplicación distribuida
+# Service ClusterIP para todo-api (acceso interno, expuesto vía Ingress).
+apiVersion: v1
+kind: Service
+metadata:
+  name: todo-api
+  labels:
+    app: todo-api
+    exercise: distributed
+spec:
+  type: ClusterIP
+  selector:
+    app: todo-api
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+      protocol: TCP

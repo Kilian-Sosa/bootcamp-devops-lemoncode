@@ -1,0 +1,48 @@
+# Ejercicio 3 - Aplicación distribuida
+# Ingress que exppone frontend y API en el mismo origen público.
+#
+# Enrutado (mismo origen, sin rewrites, sin CORS):
+#   /        -> Service todo-front (nginx sirve el HTML/JS estático)
+#   /api     -> Service todo-api  (express sirve GET/POST/PATCH/DELETE /api/...)
+#
+# El frontend (todo.service.ts) usa `host() = process.env.API_HOST || ""`. Al omitir
+# API_HOST (como pide el enunciado), las llamadas del navegador son relativas a "/"
+# (p.ej. "/api/"). Como el Ingress sirve frontend y API en el mismo host, esas
+# llamadas llegan al Service todo-api sin necesidad de CORS y sin exponer el DNS
+# interno "todo-api" al navegador.
+#
+# No hay rewrites: la API ya sirve rutas bajo "/api/", así que el path que llega
+# ("/api/", "/api/:id/") es exactamente el que espera express.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: todo-ingress
+  labels:
+    app: todo-app
+    exercise: distributed
+  annotations:
+    # Sin rewrite-target: la API ya sirve "/api/...". Verificado en todo-api/src/app.ts.
+spec:
+  # Clase del controlador instalado por el addon "ingress" de Minikube (nginx).
+  # El script verifica que exista el IngressClass "nginx"; si el addon usa otro
+  # nombre, se ajusta en runtime (ver ejercicio3.sh).
+  ingressClassName: nginx
+  rules:
+    - http:
+        paths:
+          # Frontend: ruta raíz. pathType Prefix cubre "/" y todo lo no-API.
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: todo-front
+                port:
+                  number: 80
+          # API: rutas "/api" y "/api/...". Sin rewrite: el path se pasa tal cual.
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: todo-api
+                port:
+                  number: 80
