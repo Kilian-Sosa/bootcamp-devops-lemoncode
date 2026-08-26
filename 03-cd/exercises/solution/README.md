@@ -15,8 +15,7 @@ GitHub Actions. No implementa la pista de GitLab.
 | A4: accion `motivate` | `.github/actions/motivate/` y workflow | Rutas de cita y fallback validadas localmente; evento `issues:labeled` pendiente de rama por defecto |
 
 Las aplicaciones de trabajo estan en `hangman-front/`, `hangman-api/` y
-`hangman-e2e/`. Son copias de `.start-code`; esa fuente se conserva sin
-modificar.
+`hangman-e2e/`. Son copias de `.start-code`.
 
 ## Jenkins
 
@@ -53,37 +52,3 @@ Docker del host. Vease `jenkins/README.md`.
   validar tambien desde Windows sin cambiar dependencias.
 - `.gitattributes` conserva LF en scripts shell y en el wrapper de Gradle.
 - El test de frontend ahora espera los dos temas que devuelve su propio stub.
-
-## Evidencia local y remota real (25-26-08-2026)
-
-El detalle y los limites estan en `evidence/validation-2026-08-25.md`.
-
-Se ejecutaron con exito:
-
-- frontend: `npm ci`, `npm run build`, `npm test` con Node 24.16.0 (1 test);
-- API: `npm ci`, `npm run build`, `npm test` con Node 24.16.0 (1 test);
-- imagenes Docker de API y frontend, HTTP API y frontend, y sustitucion real de
-  `API_URL` en el bundle servido;
-- Cypress 10.10.0 en modo headless: 2 specs, 2 tests correctos;
-- `./gradlew compileJava` y `./gradlew test` en `gradle:7.6.6-jdk17`;
-- `docker compose config`, Jenkins HTTP 200, plugins requeridos y
-  `docker version` desde Jenkins hasta DinD por TLS.
-- GitHub Actions de la PR #3: **Frontend CI** y **Hangman E2E** correctos en
-  el commit `a6d0e28`.
-- Jenkins Pipeline from SCM sobre `*/feat/cd-exercises-solution`: **Checkout**,
-  **Compile** y **Unit Tests** correctos con `gradle:7.6.6-jdk17` y DinD.
-
-Los dos specs Cypress suministrados se conservaron sin cambios y se ejecutaron
-tal como exige el ejercicio.
-
-## Verificaciones pendientes por diseno
-
-Los resultados remotos disponibles son los de la PR #3: **Frontend CI** y
-**Hangman E2E** terminaron correctamente. No se afirma ninguna ejecucion no
-indicada a continuacion.
-
-1. Tras merge a la rama por defecto, disparar **Frontend Publish (GHCR)** y
-   comprobar el paquete en GHCR.
-2. Tras merge, crear una issue de prueba y anadir `motivate`; comprobar los
-   logs de **Motivate Issue**. Los workflows `workflow_dispatch` e
-   `issues:labeled` se resuelven desde la rama por defecto.
