@@ -41,12 +41,6 @@ pipeline {
                     sh './gradlew test'
                 }
             }
-            post {
-                always {
-                    junit allowEmptyResults: true,
-                         testResults: '03-cd/exercises/jenkins-resources/calculator/build/test-results/test/*.xml'
-                }
-            }
         }
     }
 
