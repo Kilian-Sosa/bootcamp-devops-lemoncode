@@ -69,3 +69,10 @@ msbuild.wrn
 
 
 .playwright-mcp
+
+# Terraform local working data and sensitive/local inputs. Provider dependency
+# locks remain tracked to make provider selection reproducible.
+.terraform/
+terraform.tfstate
+terraform.tfstate.*
+*.tfvars
