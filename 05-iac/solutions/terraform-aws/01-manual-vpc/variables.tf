@@ -18,7 +18,7 @@ variable "vpc_cidr" {
   default     = "10.0.0.0/16"
 
   validation {
-    condition     = can(regex("^10\\.|^172\\.(1[6-9]|2[0-9]|3[0-1])\\.|^192\\.168\\.", var.vpc_cidr))
+    condition     = can(cidrnetmask(var.vpc_cidr)) && (startswith(var.vpc_cidr, "10.") || can(regex("^172\\.(1[6-9]|2[0-9]|3[0-1])\\.", var.vpc_cidr)) || startswith(var.vpc_cidr, "192.168."))
     error_message = "vpc_cidr debe ser un CIDR privado RFC1918 (10.x, 172.16-31.x o 192.168.x)."
   }
 }
@@ -29,7 +29,7 @@ variable "public_subnet_cidr" {
   default     = "10.0.1.0/24"
 
   validation {
-    condition     = can(regex("^10\\.|^172\\.(1[6-9]|2[0-9]|3[0-1])\\.|^192\\.168\\.", var.public_subnet_cidr))
+    condition     = can(cidrnetmask(var.public_subnet_cidr)) && (startswith(var.public_subnet_cidr, "10.") || can(regex("^172\\.(1[6-9]|2[0-9]|3[0-1])\\.", var.public_subnet_cidr)) || startswith(var.public_subnet_cidr, "192.168."))
     error_message = "public_subnet_cidr debe ser un CIDR privado RFC1918."
   }
 }

@@ -18,7 +18,7 @@ Esta solución está **implementada (escrita)** y validada solo de forma local.
 - ❌ No se han creado recursos en AWS.
 - ❌ No se ha ejecutado `terraform plan`, `terraform apply` ni `terraform destroy`.
 - ❌ No hay evidencia de ejecución: **pendiente hasta que el usuario disponga de
-> cuenta AWS**.
+  cuenta AWS**.
 
 El agente que generó esta solución **no tiene cuenta AWS** y por acuerdo no debe
 crear ni modificar recursos en la nube. Toda la evidencia de ejecución deberá
@@ -93,22 +93,22 @@ No se ha modificado el material de formación bajo `05-iac/00-terraform/`.
 - **Sin NAT Gateway**: el ejercicio usa IGW + subred pública. No se crea NAT
   Gateway ni Elastic IP. Una subred pública con IGW es suficiente.
 - **HTTP 80 pública (`0.0.0.0/0`)**: requerido por el ejercicio para servir
-> NGINX. Es deliberadamente abierto.
+  NGINX. Es deliberadamente abierto.
 - **SSH 22 solo desde `/32` del usuario**: la variable `ssh_cidr` **no** abre al
   mundo. Por defecto `ssh_cidr = null` y, en ese caso, no se crea la regla SSH.
-> Ejemplo: `203.0.113.10/32`.
+  Ejemplo: `203.0.113.10/32`.
 - **La clave privada SSH nunca entra en el state de Terraform**: se importa una
-> clave **pública** local con `file(pathexpand(var.ssh_public_key_path))`. No se
-> usa `tls_private_key`.
+  clave **pública** local con `file(pathexpand(var.ssh_public_key_path))`. No se
+  usa `tls_private_key`.
 - **Credenciales AWS fuera de Terraform**: no se guardan `access_key`,
-> `secret_key` ni `session_token` en el código. Se usa la cadena estándar del
-> provider AWS. No se recomiendan claves del usuario root.
+  `secret_key` ni `session_token` en el código. Se usa la cadena estándar del
+  provider AWS. No se recomiendan claves del usuario root.
 - **EC2 y la IP pública IPv4 pueden tener coste**: para cuentas creadas después
   del 15 de julio de 2025 AWS usa su modelo más reciente de
   créditos/free-plan. **No se garantiza coste 0 €/0 $**. Confirma la elegibilidad
   Free Tier / los créditos de la cuenta antes de aplicar EC2.
 - **`terraform destroy` siempre**: al terminar el ejercicio, destruye todo y
-> verifica que no quedan instancias EC2 ni recursos facturables.
+  verifica que no quedan instancias EC2 ni recursos facturables.
 
 No se afirma que los recursos sean permanentemente gratis.
 
@@ -195,7 +195,7 @@ ssh -i ~/.ssh/lemoncode-iac ec2-user@<PUBLIC_IP>
 ```
 
 Paso manual del ejercicio (NGINX en Docker). El `user_data` **no** arranca NGINX
-> automáticamente: el alumno debe lanzarlo a mano por SSH:
+automáticamente: el alumno debe lanzarlo a mano por SSH:
 
 ```bash
 docker run -d --name nginx -p 80:80 nginx:alpine
@@ -238,15 +238,15 @@ module "vpc" {
 }
 ```
 
-> El módulo `vpc` 6.6.1 requiere AWS provider `>= 6.28`. Ambas implementaciones
-> usan `~> 6.60`.
+El módulo `vpc` 6.6.1 requiere AWS provider `>= 6.28`. Ambas implementaciones
+usan `~> 6.60`.
 
 El security group, el key pair, el EC2 y el `user_data` **se mantienen** iguales
-> que en `01-manual-vpc` (salvo referencias a outputs del módulo). No se
-> duplican recursos de red manuales en `02-vpc-module`.
+que en `01-manual-vpc` (salvo referencias a outputs del módulo). No se
+duplican recursos de red manuales en `02-vpc-module`.
 
 **No aplicar ambos directorios simultáneamente**: representan implementaciones
-> alternativas/evolutivas. Flujo recomendado:
+alternativas/evolutivas. Flujo recomendado:
 
 1. Completa/valida `01-manual-vpc`.
 2. `terraform destroy` (en `01-manual-vpc`).
@@ -260,7 +260,7 @@ No se sugiere migración de estado avanzada salvo que el ejercicio lo pida.
 ## Evidencia recomendada
 
 A partir de los comentarios previos del profesor, una vez el usuario **ejecute**
-> el ejercicio, se sugieren estas capturas (**no crear capturas falsas**):
+el ejercicio, se sugieren estas capturas (**no crear capturas falsas**):
 
 - `terraform plan` / `terraform apply` mostrando VPC/subred/ruta/SG/key pair
   (Fase A).
@@ -283,6 +283,6 @@ terraform destroy
 ```
 
 y verifica en la consola AWS que **no quedan** instancias EC2, IP públicas
-> IPv4, VPC u otros recursos facturables. Recuerda que la IP pública IPv4 puede
-> generar coste aunque la instancia esté parada; por eso conviene destruir el
-> entorno por completo.
+IPv4, VPC u otros recursos facturables. Recuerda que la IP pública IPv4 puede
+generar coste aunque la instancia esté parada; por eso conviene destruir el
+entorno por completo.
