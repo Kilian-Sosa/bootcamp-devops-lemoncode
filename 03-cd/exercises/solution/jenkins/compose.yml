@@ -33,6 +33,9 @@ services:
     volumes:
       - dind-data:/var/lib/docker
       - jenkins-dind-certs:/certs
+      # Docker Pipeline creates runner containers through this remote daemon.
+      # It needs the exact Jenkins workspace path available for bind mounts.
+      - jenkins-home:/var/jenkins_home
     networks:
       jenkins-net:
         aliases:
