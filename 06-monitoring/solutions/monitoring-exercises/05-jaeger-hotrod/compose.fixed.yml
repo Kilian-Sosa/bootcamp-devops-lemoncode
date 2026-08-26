@@ -1,0 +1,40 @@
+services:
+  jaeger:
+    image: jaegertracing/jaeger:2.20.0
+    container_name: monitoring-jaeger-fixed
+    ports:
+      - "16686:16686"
+      - "16687:16687"
+      - "4317:4317"
+      - "4318:4318"
+    environment:
+      - LOG_LEVEL=info
+    networks:
+      - hotrod-net
+
+  hotrod:
+    image: jaegertracing/example-hotrod:2.20.0
+    container_name: monitoring-hotrod-fixed
+    ports:
+      - "8080:8080"
+      - "8083:8083"
+    # Apply HotROD's intentional-fix flags:
+    #   -D / --fix-db-query-delay <duration>  -> reduce the simulated MySQL query delay
+    #   -M / --fix-disable-db-conn-mutex      -> remove the DB connection pool-of-one bottleneck
+    #   -W / --fix-route-worker-pool-size <n> -> widen the route service worker pool / concurrency
+    command:
+      - all
+      - -D
+      - 100ms
+      - -M
+      - -W
+      - "100"
+    environment:
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4318
+    depends_on:
+      - jaeger
+    networks:
+      - hotrod-net
+
+networks:
+  hotrod-net:

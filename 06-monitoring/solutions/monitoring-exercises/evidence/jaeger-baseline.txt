@@ -1,0 +1,11 @@
+# Ejercicio 5.2 — Jaeger / HotROD línea base
+# Validado localmente el 2026-08-26.
+
+docker compose -f compose.yml ps
+monitoring-hotrod-baseline  Up  0.0.0.0:8080->8080/tcp
+monitoring-jaeger-baseline  Up  0.0.0.0:16686->16686/tcp
+
+Se generaron 12 solicitudes a /dispatch?customer=123. Jaeger registró trazas
+del servicio frontend, incluida una operación GET /dispatch con spans hijos de
+customer, driver, route, mysql y redis-manual. Un span SQL SELECT observado
+duró 315525 microsegundos.

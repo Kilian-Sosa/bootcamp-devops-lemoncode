@@ -1,0 +1,14 @@
+# Ejercicio 5.2 — Jaeger / HotROD configuración corregida
+# Validado localmente el 2026-08-26.
+
+docker compose -f compose.fixed.yml ps
+monitoring-hotrod-fixed  Up  0.0.0.0:8080->8080/tcp
+monitoring-jaeger-fixed  Up  0.0.0.0:16686->16686/tcp
+
+GET / devolvió HTTP 200. Tras seis solicitudes a /dispatch?customer=123,
+Jaeger devolvió los servicios frontend, mysql, customer, redis-manual, driver
+y route, y una traza frontend con operación GET /dispatch.
+
+La corrección usa argumentos separados: -D 100ms, -M y -W 100. No se afirma
+una comparación cuantitativa de latencia: no se recogió una muestra controlada
+equivalente para ambos perfiles.

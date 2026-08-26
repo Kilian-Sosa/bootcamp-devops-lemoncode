@@ -1,0 +1,18 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: app_map/Dockerfile
+    container_name: monitoring-app-map
+    ports:
+      - "8000:8000"
+
+  prometheus:
+    image: prom/prometheus:v3.14.0
+    container_name: monitoring-app-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml

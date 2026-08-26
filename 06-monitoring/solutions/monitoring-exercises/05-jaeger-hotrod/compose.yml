@@ -1,0 +1,30 @@
+services:
+  jaeger:
+    image: jaegertracing/jaeger:2.20.0
+    container_name: monitoring-jaeger-baseline
+    ports:
+      - "16686:16686"
+      - "16687:16687"
+      - "4317:4317"
+      - "4318:4318"
+    environment:
+      - LOG_LEVEL=info
+    networks:
+      - hotrod-net
+
+  hotrod:
+    image: jaegertracing/example-hotrod:2.20.0
+    container_name: monitoring-hotrod-baseline
+    ports:
+      - "8080:8080"
+      - "8083:8083"
+    command: ["all"]
+    environment:
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4318
+    depends_on:
+      - jaeger
+    networks:
+      - hotrod-net
+
+networks:
+  hotrod-net:

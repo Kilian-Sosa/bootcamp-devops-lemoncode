@@ -1,0 +1,14 @@
+# Ejercicio 1 — Prometheus auto-scrape
+# Validado localmente el 2026-08-26.
+
+docker compose ps
+monitoring-prometheus-self  Up  0.0.0.0:9090->9090/tcp
+
+GET /api/v1/targets
+job=prometheus, instance=prometheus:9090, health=up, lastError=""
+
+process_resident_memory_bytes{job="prometheus"}
+96559104
+
+rate(process_cpu_seconds_total{job="prometheus"}[1m])
+0.0007583
