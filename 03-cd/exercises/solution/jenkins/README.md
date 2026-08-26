@@ -21,6 +21,9 @@ de Jenkins: Jenkins con **Docker in Docker**, con los plugins **Docker** y
 - `jenkins` monta los **certificados de cliente** generados por `dind` en
   `/certs` y se conecta al alias TLS `tcp://docker:2376` con
   `DOCKER_TLS_VERIFY=1` y `DOCKER_CERT_PATH=/certs/client`.
+- Ambos servicios montan el volumen `jenkins-home` en la misma ruta,
+  `/var/jenkins_home`. Es necesario porque Docker Pipeline pide al daemon
+  remoto que monte el workspace de Jenkins dentro del contenedor Gradle.
 - **No** se monta `/var/run/docker.sock`: eso NO seria Docker-in-Docker.
 - Todo el trafico va por la red dedicada `jenkins-net`.
 

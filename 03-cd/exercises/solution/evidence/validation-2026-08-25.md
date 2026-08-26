@@ -1,11 +1,13 @@
-# Validacion local — 25-08-2026
+# Validacion local y remota — 25-26-08-2026
 
 ## Entorno
 
 - Node `v24.16.0`, npm `12.0.2`.
 - Docker Desktop Engine `29.7.2`; las operaciones Docker requirieron acceso
   elevado al daemon de Docker Desktop.
-- No se ejecutaron workflows remotos, publicaciones GHCR ni eventos GitHub.
+- GitHub Actions de la PR #3 ejecuto correctamente **Frontend CI** y
+  **Hangman E2E** sobre `a6d0e28`.
+- No se ejecutaron publicaciones GHCR ni eventos `issues:labeled`.
 
 ## Frontend y API
 
@@ -30,9 +32,12 @@ porque el entorno impide el post-install de paquetes. Se ejecuto la misma
 carpeta de specs con `cypress/included:10.10.0`, montada contra los servicios
 temporales ya comprobados. Resultado: 2 specs, 2 tests correctos, salida 0.
 
-Los specs proporcionados son vacios; este resultado valida que Cypress alcanza
-el frontend y que los servicios arrancan, no una interaccion funcional de UI.
-Los contenedores, red y videos generados se eliminaron al terminar.
+Los specs proporcionados se conservaron sin cambios y se ejecutaron tal como
+los entrega el ejercicio. GitHub Actions ejecuto tambien el workflow E2E de la
+PR #3 correctamente: construyo ambas imagenes, arranco API y frontend, espero
+las respuestas HTTP, instalo dependencias, ejecuto `npx cypress run` y limpio
+contenedores y red. Los pasos de capturas y videos se omitieron como esta
+previsto por `if: failure()`, ya que la ejecucion fue correcta.
 
 ## Jenkins
 
@@ -43,13 +48,15 @@ Los contenedores, red y videos generados se eliminaron al terminar.
   contenia `docker-plugin.jpi` y `docker-workflow.jpi`.
 - `docker compose exec -T jenkins docker version`: correcto; cliente y daemon
   DinD informaron Docker `24.0.7` por TLS.
-
-No se creo ni ejecuto un job Jenkins desde SCM porque la rama aun no esta
-publicada en un remoto.
+- DinD y Jenkins montan el mismo volumen `jenkins-home` en
+  `/var/jenkins_home`, de modo que Docker Pipeline puede montar el workspace
+  en su contenedor Gradle.
+- El job `calculator-cd` de Pipeline from SCM ejecuto la rama
+  `*/feat/cd-exercises-solution` y termino **SUCCESS** en `7618be9`: Checkout,
+  Compile y Unit Tests se ejecutaron con `gradle:7.6.6-jdk17` mediante DinD.
 
 ## Pendiente por diseno de GitHub
 
-- La CI y E2E de PR requieren una PR remota.
 - El publish GHCR requiere `workflow_dispatch` en la rama por defecto.
 - `issues:labeled` requiere el workflow en la rama por defecto y una issue de
   prueba con la etiqueta `motivate`.
