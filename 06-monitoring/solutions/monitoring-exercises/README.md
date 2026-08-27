@@ -25,7 +25,7 @@ URLs (cuando cada setup está levantado):
 - Prometheus (ej. 1): http://localhost:9090
 - Prometheus (ej. 5.1): http://localhost:9090
 - app_map: http://localhost:8000
-- app_map /metrics: http://localhost:8000/metrics
+- app_map /metrics: http://localhost:8000/metrics/
 - Jaeger UI: http://localhost:16686
 - HotROD: http://localhost:8080
 

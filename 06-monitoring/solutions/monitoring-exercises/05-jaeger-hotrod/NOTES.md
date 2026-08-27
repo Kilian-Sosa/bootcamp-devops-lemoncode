@@ -54,7 +54,9 @@ Observaciones (2026-08-27):
   3138 ms y máximo 5156.5 ms.
 - Traza de ejemplo: `7164652cad5eceba8e80429013e41860`.
 - Los spans `SQL SELECT` estuvieron entre 275623 y 4692875 microsegundos.
-  El máximo muestra que el retardo artificial de 300 ms se acumula bajo carga.
+  El mínimo refleja aproximadamente el retardo artificial de la consulta,
+  mientras que los spans de varios segundos muestran el tiempo adicional de
+  espera provocado por la serialización del mutex bajo carga.
 - Los logs de esos spans incluyen `Acquired lock; N transactions waiting
   behind`, con `N` máximo de 14: es evidencia directa de serialización por el
   mutex de conexión de BD.
