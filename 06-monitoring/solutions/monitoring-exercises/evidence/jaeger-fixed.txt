@@ -1,14 +1,24 @@
-# Ejercicio 5.2 — Jaeger / HotROD configuración corregida
-# Validado localmente el 2026-08-26.
+# Ejercicio 5.2 — Jaeger / HotROD fixed
+# Ejecución local: 2026-08-27. Misma ráfaga: 24 peticiones concurrentes a
+# /dispatch?customer=123. Configuración: -D 100ms -M -W 100.
 
 docker compose -f compose.fixed.yml ps
 monitoring-hotrod-fixed  Up  0.0.0.0:8080->8080/tcp
 monitoring-jaeger-fixed  Up  0.0.0.0:16686->16686/tcp
 
-GET / devolvió HTTP 200. Tras seis solicitudes a /dispatch?customer=123,
-Jaeger devolvió los servicios frontend, mysql, customer, redis-manual, driver
-y route, y una traza frontend con operación GET /dispatch.
+Resultados del cliente
+requests_200=22/24
+latency_ms_min=349.7 median=463.6 max=661.4
 
-La corrección usa argumentos separados: -D 100ms, -M y -W 100. No se afirma
-una comparación cuantitativa de latencia: no se recogió una muestra controlada
-equivalente para ambos perfiles.
+Resultados extraídos de Jaeger
+trace_id=4a60d3a8f2f88f8dd70778afb72b750a
+mysql_us_min=49769 max=191360
+mutex_waiters_count=0
+route_max_concurrency=20
+
+Interpretación
+- Los dos resultados no-200 tuvieron `redis timeout` tras los reintentos del
+  simulador HotROD; no se ocultan ni se atribuyen a los cambios de BD/route.
+- No hubo eventos `Acquired lock`: -M elimina el cuello de botella del mutex.
+- `route_max_concurrency=20` demuestra paralelismo por encima del límite 3
+  de baseline tras aplicar -W 100.

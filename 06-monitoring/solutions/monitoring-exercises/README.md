@@ -261,8 +261,9 @@ repo Lemoncode):
   alloy-local-config.yaml
 ```
 
-No se copia ni se modifica ese material: solo se explica. Tampoco se añaden
-servicios de Loki a la solución (el ejercicio 3 pide explicar la carpeta).
+El material oficial se restaura sin modificaciones en `06-monitoring/01-exercise/`;
+la solución lo analiza y no lo modifica. Tampoco se añaden servicios de Loki a
+la solución (el ejercicio 3 pide explicar la carpeta).
 
 La arquitectura de `docker-compose.yaml` **no es un único proceso Loki**, sino
 un **layout distribuido de estilo Loki "simple scalable"** (microservicios read /
@@ -406,25 +407,26 @@ https://github.com/JaimeSalas/non-political-map (`/app_map`).
 - Repo upstream: https://github.com/JaimeSalas/non-political-map
 - Commit de origen copiado: `0f3dae37277c061516eae2a8d373ba9b56c0c930` (rama `main`)
 
-Solo se ha tra��do `app_map` (no `app_frontend`, `app_kpi_api`, ni ejemplos S3).
+Solo se ha traído `app_map` (no `app_frontend`, `app_kpi_api`, ni ejemplos S3).
 La app expone `/api/items/` y sirve contenido estático.
 
 ### Instrumentación
 
 Se ha añadido el cliente Prometheus (`prometheus-client==0.26.0`) a
-`requirements.txt` y se monta la app ASGI de métricas en `/metrics` **antes**
-del montaje catch-all de estáticos en `/` para que el estático no trague
-`/metrics`. La resolución del directorio estático usa `Path(__file__)` para no
-depender del directorio de trabajo.
+`requirements.txt` y se monta literalmente la app ASGI de métricas de
+`prometheus_client` en `/metrics` **antes** del montaje catch-all de estáticos
+en `/`. La ruta servida por ese montaje es `/metrics/`. La resolución del
+directorio estático usa `Path(__file__)` para no depender del directorio de
+trabajo.
 
 `app_map/main.py`:
 
 ```python
 from pathlib import Path
 
-from fastapi import FastAPI, Response
+from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
-from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
+from prometheus_client import make_asgi_app
 
 from .api.endpoints import router as item_router
 
@@ -432,12 +434,8 @@ app = FastAPI()
 
 app.include_router(item_router)
 
-@app.get("/metrics", include_in_schema=False)
-def metrics() -> Response:
-    return Response(
-        content=generate_latest(),
-        headers={"Content-Type": CONTENT_TYPE_LATEST},
-    )
+metrics_app = make_asgi_app()
+app.mount("/metrics", metrics_app)
 
 # Resolve the statics directory relative to this file so it does not depend on
 # the current working directory from which Uvicorn is launched.
@@ -472,7 +470,7 @@ CMD ["uvicorn", "app_map.main:app", "--host", "0.0.0.0", "--port", "8000", "--wo
 `prometheus.yml`). Comparten la red de Compose implícita.
 
 `05-prometheus-app/prometheus.yml` hace scrape de la app vía **DNS de Docker**
-`app:8000` (no `localhost:8000`), con el path por defecto `/metrics`:
+`app:8000` (no `localhost:8000`), usando el path del montaje ASGI `/metrics/`:
 
 ```yaml
 global:
@@ -481,7 +479,7 @@ global:
 
 scrape_configs:
   - job_name: app_map
-    metrics_path: /metrics
+    metrics_path: /metrics/
     static_configs:
       - targets:
           - app:8000
@@ -500,7 +498,7 @@ docker compose up -d
 curl -s http://localhost:8000/api/items/
 
 # /metrics expone métricas
-curl -s http://localhost:8000/metrics | grep -E 'process_resident_memory_bytes|process_cpu_seconds_total'
+curl -s http://localhost:8000/metrics/ | grep -E 'process_resident_memory_bytes|process_cpu_seconds_total'
 
 # target UP vía API de Prometheus
 curl -s "http://localhost:9090/api/v1/targets" | head -c 2000
@@ -548,10 +546,13 @@ curl -s http://localhost:16686/api/services
 # verificar HotROD
 curl -s -o /dev/null -w "%{http_code}\n" http://localhost:8080
 
-# generar tráfico (clientes válidos: 123, 392, 731, 567)
-for i in $(seq 1 12); do
-  curl -s -o /dev/null -w "%{http_code} %{time_total}s\n" "http://localhost:8080/dispatch?customer=123"
-done
+# generar una ráfaga concurrente comparable (PowerShell)
+$url = 'http://localhost:8080/dispatch?customer=123'
+$jobs = 1..24 | ForEach-Object {
+  Start-Job { param($requestUrl) Invoke-WebRequest $requestUrl } -ArgumentList $url
+}
+$jobs | Wait-Job | Receive-Job
+$jobs | Remove-Job
 
 # trazas en Jaeger (API)
 curl -s "http://localhost:16686/api/traces?service=frontend&limit=5" | head -c 2000
@@ -563,10 +564,13 @@ Salida real en `evidence/jaeger-baseline.txt`.
 
 ```bash
 docker compose -f compose.fixed.yml up -d
-# generar tráfico equivalente
-for i in $(seq 1 12); do
-  curl -s -o /dev/null -w "%{http_code} %{time_total}s\n" "http://localhost:8080/dispatch?customer=123"
-done
+# repetir exactamente la misma ráfaga concurrente de 24 solicitudes de baseline
+$url = 'http://localhost:8080/dispatch?customer=123'
+$jobs = 1..24 | ForEach-Object {
+  Start-Job { param($requestUrl) Invoke-WebRequest $requestUrl } -ArgumentList $url
+}
+$jobs | Wait-Job | Receive-Job
+$jobs | Remove-Job
 curl -s "http://localhost:16686/api/traces?service=frontend&limit=5" | head -c 2000
 ```
 

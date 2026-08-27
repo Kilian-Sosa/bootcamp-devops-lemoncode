@@ -35,18 +35,31 @@ docker compose -f compose.yml up -d
 Clientes de ejemplo válidos: `123`, `392`, `731`, `567`.
 Endpoint de despacho: `GET /dispatch?customer=<ID>`.
 
-Tráfico generado (varias peticiones, algunas concurrentes):
+Tráfico generado: ráfaga de **24 peticiones concurrentes** desde PowerShell:
 
-```bash
-for i in 1 2 3 4 5 6 7 8; do
-  curl -s -o /dev/null -w "%{http_code} %{time_total}s\n" \
-    "http://localhost:8080/dispatch?customer=$((RANDOM % 4 == 0 ? 123 : 392))"
-done
+```powershell
+$url = 'http://localhost:8080/dispatch?customer=123'
+$jobs = 1..24 | ForEach-Object {
+  Start-Job { param($requestUrl) Invoke-WebRequest $requestUrl } -ArgumentList $url
+}
+$jobs | Wait-Job | Receive-Job
+$jobs | Remove-Job
 ```
 
 Observaciones reales capturadas en `evidence/jaeger-baseline.txt`.
 
-<!-- BASELINE-OBSERVATIONS: se rellenará tras la ejecución real -->
+Observaciones (2026-08-27):
+
+- 24/24 respuestas HTTP 200; latencia de cliente: mínimo 728 ms, mediana
+  3138 ms y máximo 5156.5 ms.
+- Traza de ejemplo: `7164652cad5eceba8e80429013e41860`.
+- Los spans `SQL SELECT` estuvieron entre 275623 y 4692875 microsegundos.
+  El máximo muestra que el retardo artificial de 300 ms se acumula bajo carga.
+- Los logs de esos spans incluyen `Acquired lock; N transactions waiting
+  behind`, con `N` máximo de 14: es evidencia directa de serialización por el
+  mutex de conexión de BD.
+- La concurrencia máxima calculada a partir de los intervalos de los spans
+  `GET /route` fue 3, coherente con el pool de workers por defecto.
 
 ## 3. Retardo de BD (`-D` / `--fix-db-query-delay`)
 
@@ -83,21 +96,32 @@ Banderas aplicadas: `all -D 100ms -M -W 100`.
 
 Observaciones reales capturadas en `evidence/jaeger-fixed.txt`.
 
-<!-- FIXED-OBSERVATIONS: se rellenará tras la ejecución real -->
+Se aplicó exactamente la misma ráfaga de 24 peticiones concurrentes.
+
+- 22/24 respuestas HTTP 200; latencia de cliente: mínimo 349.7 ms, mediana
+  463.6 ms y máximo 661.4 ms. Las dos respuestas no exitosas se corresponden
+  con `redis timeout` del simulador HotROD tras tres reintentos; se conservan
+  como evidencia y no se atribuyen al cambio de BD o de route.
+- Traza de ejemplo: `4a60d3a8f2f88f8dd70778afb72b750a`.
+- Los spans `SQL SELECT` estuvieron entre 49769 y 191360 microsegundos. No se
+  registraron eventos `Acquired lock`, consistente con `-M` desactivando el
+  mutex de conexión.
+- La concurrencia máxima calculada para `GET /route` fue 20. Los spans se
+  solapan ampliamente, frente al máximo de 3 de baseline, demostrando el
+  efecto de `-W 100`.
 
 ## 7. Experiencia
 
-<!-- EXPERIENCE: se rellenará tras la ejecución real -->
-
-> Lo que el tracing distribuido facilita: mirando solo el tiempo de respuesta
-> agregado o los logs, un cuello de botella se percibe como "todo va lento",
-> pero no se sabe *dónde*. Con trazas se ve la jerarquía de spans de una petición
-> concreta y se puede identificar de forma directa cuál servicio (BD, ruta,
-> cliente) consume la mayor parte de la latencia, y si los spans de un mismo
-> servicio se solapan o se encolan. Eso convierte el análisis de causa raíz en
-> algo mucho más dirigido que inferir a partir de métricas agregadas.
+La ráfaga concurrente hizo visibles los problemas que una petición aislada no
+muestra: en baseline la espera de mutex llegó a 14 transacciones y route no
+superó tres spans simultáneos. Tras aplicar las correcciones, la mediana de la
+ráfaga bajó de 3138 ms a 463.6 ms, los spans MySQL dejaron de acumular segundos
+de espera y route alcanzó 20 spans simultáneos. El tracing permite atribuir la
+mejora a los cuellos de botella concretos, no solo observar que el tiempo total
+ha cambiado.
 
 ---
 
-> Estado de ejecución: los bloques marcados como pendientes se rellenarán con
-> observaciones reales tras la ejecución local. No se inventan mediciones.
+> Estado de ejecución: baseline y fixed se ejecutaron localmente el
+> 2026-08-27. Las observaciones anteriores y los ficheros de `evidence/` se
+> derivan de esas ejecuciones.
