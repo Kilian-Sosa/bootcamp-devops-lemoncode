@@ -587,21 +587,23 @@ docker compose -f compose.fixed.yml down
 
 ---
 
-## Capturas recomendadas para la entrega
+## Evidencias visuales
 
-Para la entrega final se recomienda al alumno adjuntar capturas (no
-fabricadas) de:
+Además de las evidencias de texto almacenadas en `evidence/`, se incluyen las
+siguientes capturas reales obtenidas durante la validación local:
 
-- Prometheus Targets mostrando UP (ej. 1 y ej. 5.1);
-- Prometheus — consulta de memoria;
-- Prometheus — consulta de CPU;
-- app `/metrics`;
-- app target UP;
-- Jaeger — traza baseline;
-- Jaeger — traza fixed.
+| Captura | Evidencia |
+|---|---|
+| `evidence/screenshots/01-prometheus-targets.png` | Target `prometheus` en estado **UP** |
+| `evidence/screenshots/02-prometheus-memory-query.png` | Consulta PromQL de memoria |
+| `evidence/screenshots/03-prometheus-cpu-query.png` | Consulta PromQL de CPU |
+| `evidence/screenshots/04-prometheus-app-map-target.png` | Target `app_map` en estado **UP**, scrapeando `http://app:8000/metrics/` |
+| `evidence/screenshots/05-jaeger-baseline-trace.png` | Traza Jaeger de la configuración baseline |
+| `evidence/screenshots/06-jaeger-fixed-trace.png` | Traza Jaeger después de aplicar las correcciones |
 
-Las evidencias de texto en `evidence/` son la fuente de verdad de la
-ejecución; las capturas son apoyo visual para la entrega.
+Las capturas complementan las evidencias de texto de `evidence/`, donde se
+registran los resultados completos de las ejecuciones y las comparaciones
+baseline/fixed.
 
 ---
 
