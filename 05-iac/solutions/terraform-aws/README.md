@@ -1,51 +1,34 @@
 # Terraform AWS — solución IaC
 
-> Solución del ejercicio de Infraestructura como Código (IaC) con Terraform
-> sobre AWS para el módulo `05-iac` del bootcamp DevOps de Lemoncode.
+> Solución del ejercicio de Infraestructura como Código (IaC) con Terraform sobre AWS para el módulo `05-iac` del bootcamp DevOps de Lemoncode.
 
 ---
 
-## ⚠️ Estado real de la implementación
+## Estado de la implementación
 
-Esta solución está **implementada (escrita)** y validada solo de forma local.
+La solución está implementada y validada mediante una ejecución real en AWS el 31-08-2026, en `eu-west-1`, con Terraform 1.16.0 y credenciales temporales o basadas en perfil. No hay credenciales embebidas en Terraform.
 
-- ✅ Implementación escrita: ficheros Terraform completos y revisados estáticamente.
-- ✅ Validación local (26-08-2026): Terraform CLI 1.15.9; `terraform fmt
-  -recursive`, `terraform init -backend=false` y `terraform validate` han
-  finalizado correctamente en los dos directorios. `init` solo descargó
-  proveedores/módulos del Registry y no configuró ningún backend ni contactó
-  AWS.
-- ❌ No se han creado recursos en AWS.
-- ❌ No se ha ejecutado `terraform plan`, `terraform apply` ni `terraform destroy`.
-- ❌ No hay evidencia de ejecución: **pendiente hasta que el usuario disponga de
-  cuenta AWS**.
-
-El agente que generó esta solución **no tiene cuenta AWS** y por acuerdo no debe
-crear ni modificar recursos en la nube. Toda la evidencia de ejecución deberá
-generarla el usuario una vez disponga de cuenta. **No se fabrican capturas ni
-logs falsos.**
+Se validaron las variantes `01-manual-vpc` y `02-vpc-module` en sus fases de red y de EC2. Tras recoger las evidencias, se destruyó toda la infraestructura de ambas variantes y se verificó que el estado de Terraform quedó vacío.
 
 ---
 
 ## Alcance
 
-Esta solución cubre los 8 pasos del ejercicio:
+Esta solución cubre los ocho pasos del ejercicio:
 
 | Paso | Descripción | Implementación |
 |------|-------------|----------------|
-| 1 | VPC con acceso a Internet (CIDR, región, IGW, asociación) | `01-manual-vpc` y `02-vpc-module` |
+| 1 | VPC con acceso a Internet (CIDR, región, IGW y asociación) | `01-manual-vpc` y `02-vpc-module` |
 | 2 | Subred pública con ruta `0.0.0.0/0 -> IGW` y asociación | `01-manual-vpc` y `02-vpc-module` |
-| 3 | Security Groups: HTTP 80 pública + SSH 22 solo desde la IP del usuario | `01-manual-vpc` y `02-vpc-module` |
-| 4 | Key pair para SSH (importando clave pública local) | `01-manual-vpc` y `02-vpc-module` |
-| 5 | Instancia EC2 Free-Tier (t3.micro) en la subred pública con IP pública | `01-manual-vpc` y `02-vpc-module` |
+| 3 | Security group: HTTP 80 público y SSH 22 solo desde la IP del usuario | `01-manual-vpc` y `02-vpc-module` |
+| 4 | Key pair para SSH importando una clave pública local | `01-manual-vpc` y `02-vpc-module` |
+| 5 | EC2 `t3.micro` en subred pública con IPv4 pública | `01-manual-vpc` y `02-vpc-module` |
 | 6 | `user_data` que instala Docker | `01-manual-vpc` y `02-vpc-module` |
-| 7 | Output de la IP pública de la EC2 | `01-manual-vpc` y `02-vpc-module` |
-| 8 | Refactor con `terraform-aws-modules/vpc/aws` | `02-vpc-module` |
+| 7 | Output de la IPv4 pública de EC2 | `01-manual-vpc` y `02-vpc-module` |
+| 8 | Refactor de la red con `terraform-aws-modules/vpc/aws` | `02-vpc-module` |
 
-- **`01-manual-vpc`** = pasos 1-7 implementados con recursos AWS nativos
-  explícitos.
-- **`02-vpc-module`** = paso 8 (refactor) reemplazando el cableado de red manual
-  por el módulo oficial `terraform-aws-modules/vpc/aws` versión `6.6.1`.
+- **`01-manual-vpc`** implementa los pasos 1-7 con recursos AWS explícitos.
+- **`02-vpc-module`** aplica el paso 8: sustituye el cableado de red por `terraform-aws-modules/vpc/aws` 6.6.1, manteniendo SG, key pair, EC2 y `user_data` equivalentes.
 
 ---
 
@@ -55,6 +38,9 @@ Esta solución cubre los 8 pasos del ejercicio:
 05-iac/solutions/terraform-aws/
 ├── README.md
 ├── .gitignore
+├── evidence/
+│   └── screenshots/
+│       └── 01-...png a 15-...png
 ├── 01-manual-vpc/
 │   ├── versions.tf
 │   ├── provider.tf
@@ -81,71 +67,52 @@ Esta solución cubre los 8 pasos del ejercicio:
     └── terraform.tfvars.example
 ```
 
-No se ha modificado el material de formación bajo `05-iac/00-terraform/`.
+No se modifica el material de formación de `05-iac/00-terraform/`.
 
 ---
 
-## Seguridad y costes
+## Seguridad y control de costes
 
-- **`create_instance = false` por defecto**: en la Fase A (pasos 1-4) no se crea
-  ninguna instancia EC2. Solo VPC, IGW, subred pública, tabla de rutas, SG y key
-  pair.
-- **Sin NAT Gateway**: el ejercicio usa IGW + subred pública. No se crea NAT
-  Gateway ni Elastic IP. Una subred pública con IGW es suficiente.
-- **HTTP 80 pública (`0.0.0.0/0`)**: requerido por el ejercicio para servir
-  NGINX. Es deliberadamente abierto.
-- **SSH 22 solo desde `/32` del usuario**: la variable `ssh_cidr` **no** abre al
-  mundo. Por defecto `ssh_cidr = null` y, en ese caso, no se crea la regla SSH.
-  Ejemplo: `203.0.113.10/32`.
-- **La clave privada SSH nunca entra en el state de Terraform**: se importa una
-  clave **pública** local con `file(pathexpand(var.ssh_public_key_path))`. No se
-  usa `tls_private_key`.
-- **Credenciales AWS fuera de Terraform**: no se guardan `access_key`,
-  `secret_key` ni `session_token` en el código. Se usa la cadena estándar del
-  provider AWS. No se recomiendan claves del usuario root.
-- **EC2 y la IP pública IPv4 pueden tener coste**: para cuentas creadas después
-  del 15 de julio de 2025 AWS usa su modelo más reciente de
-  créditos/free-plan. **No se garantiza coste 0 €/0 $**. Confirma la elegibilidad
-  Free Tier / los créditos de la cuenta antes de aplicar EC2.
-- **`terraform destroy` siempre**: al terminar el ejercicio, destruye todo y
-  verifica que no quedan instancias EC2 ni recursos facturables.
+- `create_instance = false` por defecto; la EC2 se habilita expresamente solo en la Fase B.
+- La instancia es `t3.micro` y configura `cpu_credits = "standard"`, evitando el uso de créditos excedentes de T3 Unlimited.
+- El volumen raíz es `gp3`, cifrado y de 8 GiB; `delete_on_termination = true`.
+- La instancia exige IMDSv2.
+- No se crea NAT Gateway, Elastic IP, balanceador de carga ni base de datos.
+- HTTP TCP 80 es público porque el ejercicio exige publicar NGINX.
+- SSH TCP 22 se restringe siempre a la IPv4 pública exacta del usuario en `/32`; nunca se permite `0.0.0.0/0`.
+- Terraform/AWS recibe únicamente la clave pública SSH. La clave privada no entra en el estado de Terraform.
+- Las credenciales AWS no se almacenan en Terraform; se usan perfiles o credenciales temporales de la cadena estándar del provider.
 
-No se afirma que los recursos sean permanentemente gratis.
+No se afirma que los servicios AWS sean universal o permanentemente gratuitos. La práctica se ejecutó con una configuración orientada a minimizar costes y se destruyó inmediatamente después de validarla.
 
 ---
 
-## Preparación futura
+## Requisitos
 
-El usuario **no tiene cuenta AWS** todavía. Más adelante necesitará:
+Para reproducir la práctica se necesita:
 
-- **Cuenta AWS** (con MFA y usuario IAM, no usuario root).
-- **Terraform** 1.x instalado localmente.
-- **Credenciales AWS** mediante la cadena estándar del provider AWS
-  (`AWS_PROFILE`, `~/.aws/credentials`, variables de entorno, SSO…). Configura
-  las credenciales **fuera de Git/Terraform**. No uses claves del usuario root.
-- **Clave SSH local**: genera una clave ED25519 con
-  `ssh-keygen -t ed25519 -f ~/.ssh/lemoncode-iac` y registra la ruta de la clave
-  **pública** en `ssh_public_key_path`. No subas la clave privada a ningún
-  sitio.
-- **IP pública actual en formato CIDR /32** para `ssh_cidr`, por ejemplo
-  `203.0.113.10/32`.
+- Una cuenta AWS con MFA y un principal IAM adecuado, sin usar el usuario root.
+- Terraform 1.x y credenciales mediante perfil, SSO, variables de entorno u otro mecanismo estándar del provider AWS.
+- Una clave SSH local; se configura la ruta de su parte pública en `ssh_public_key_path`. Si hace falta crearla: `ssh-keygen -t ed25519 -f ~/.ssh/lemoncode-iac`.
+- La IPv4 pública actual en CIDR `/32` para `ssh_cidr`, por ejemplo `203.0.113.10/32`.
 
-> No ejecutes `ssh-keygen` si ya tienes una clave; este paso es
-> documentación.
+Mantén las credenciales, las claves privadas y los valores reales de `terraform.tfvars` fuera de Git.
 
 ---
 
 ## Fase A — pasos 1-4
 
-Objetivo: crear solo la infraestructura de red + SG + key pair, **sin EC2**.
-
-Mantén:
+La Fase A crea únicamente la infraestructura de red, el security group y el key pair, sin EC2:
 
 ```hcl
 create_instance = false
 ```
 
-Para una futura ejecución con una cuenta AWS, los comandos previstos son:
+En la ejecución manual real, `terraform plan` indicó **10 recursos a añadir** y `terraform apply` completó **10 añadidos**. Un plan posterior devolvió `No changes. Your infrastructure matches the configuration.`
+
+La fase creó la VPC `10.0.0.0/16`, IGW, subred pública `10.0.1.0/24`, tabla de rutas con `0.0.0.0/0 -> IGW`, asociación, SG con HTTP público y egress, y el key pair público. No se creó instancia EC2.
+
+Comandos reproducibles:
 
 ```bash
 terraform init
@@ -155,134 +122,170 @@ terraform plan
 terraform apply
 ```
 
-> ⚠️ `terraform fmt`, `terraform init -backend=false` y `terraform validate`
-> ya se ejecutaron localmente. `terraform plan` y `terraform apply` requieren
-> una cuenta AWS y no se han ejecutado.
-
-Recursos que deberían aparecer en la Fase A:
-
-- VPC (CIDR `10.0.0.0/16`, DNS support + DNS hostnames activados).
-- Internet Gateway asociado a la VPC.
-- Subred pública (`10.0.1.0/24`) en una AZ dinámica,
-  `map_public_ip_on_launch = true`.
-- Tabla de rutas pública con ruta `0.0.0.0/0 -> IGW`, asociada a la subred.
-- Security group: HTTP 80 desde `0.0.0.0/0` y **sin** regla SSH si
-  `ssh_cidr = null`.
-- Egress a `0.0.0.0/0` para permitir instalar Docker y descargar imágenes.
-- Key pair importado desde la clave pública local.
-- **Sin instancia EC2.**
-
 ---
 
 ## Fase B — pasos 5-7
 
-Antes de cambiar `create_instance`:
+Para la Fase B configura `ssh_cidr` con la IPv4 pública actual en `/32` y activa explícitamente la instancia:
 
-1. Confirma la elegibilidad AWS Free Tier / los créditos de la cuenta (la EC2 y
-   la IP pública IPv4 pueden tener coste).
-2. Configura `ssh_cidr` con tu IP pública actual en formato `/32` (ej.
-   `203.0.113.10/32`). Si `create_instance = true` **es obligatorio** que
-   `ssh_cidr != null` (hay un `precondition` que lo garantiza).
-3. Cambia a `create_instance = true`.
-4. Revisa con `terraform plan` con cuidado.
-5. `terraform apply`.
-6. Lee la IP pública con `terraform output public_ip`.
+```hcl
+create_instance = true
+```
 
-Ejemplo futuro de SSH (Amazon Linux 2023), **documentación, no ejecutar ahora**:
+La ejecución manual desplegó correctamente una EC2 Amazon Linux 2023 `t3.micro`. La AMI se resolvió con el parámetro público SSM de AWS mediante `data "aws_ssm_parameter"`, en lugar de usar un identificador de AMI fijo. Se verificaron los créditos T3 en modo `standard`, IMDSv2, el volumen raíz `gp3` cifrado de 8 GiB en uso y `delete_on_termination`.
+
+Tras finalizar `cloud-init` (`status: done`), Docker quedó instalado y en ejecución. NGINX se lanzó manualmente por SSH con `nginx:alpine`; `docker ps`, `curl -I http://localhost` y una petición desde el equipo local confirmaron la respuesta HTTP 200. La página de bienvenida se abrió mediante la IPv4 pública de la EC2.
 
 ```bash
 ssh -i ~/.ssh/lemoncode-iac ec2-user@<PUBLIC_IP>
+docker run -d --name lemoncode-nginx -p 80:80 nginx:alpine
+docker ps
+curl -I http://localhost
 ```
-
-Paso manual del ejercicio (NGINX en Docker). El `user_data` **no** arranca NGINX
-automáticamente: el alumno debe lanzarlo a mano por SSH:
-
-```bash
-docker run -d --name nginx -p 80:80 nginx:alpine
-```
-
-Luego:
-
-```
-http://<PUBLIC_IP>
-```
-
-> Documentación. No se ejecuta en esta solución.
 
 ---
 
 ## Docker `user_data`
 
-`user-data.sh` es compatible con Amazon Linux 2023:
+`user-data.sh` es compatible con Amazon Linux 2023: instala Docker, habilita e inicia el servicio y añade `ec2-user` al grupo `docker`.
 
-- instala Docker (`dnf install -y docker`);
-- habilita e inicia el servicio `docker`;
-- añade `ec2-user` al grupo `docker` para usar Docker sin `sudo`.
-
-**NGINX no se arranca automáticamente** porque el ejercicio pide explícitamente
-que el alumno, una vez conectado por SSH, lance el contenedor NGINX a mano.
-Ese paso de aprendizaje se conserva deliberadamente.
+NGINX no se inicia automáticamente: el alumno lo arranca deliberadamente por SSH durante la práctica, manteniendo el paso de aprendizaje solicitado.
 
 ---
 
 ## Fase C — paso 8
 
-`02-vpc-module` reemplaza **solo el cableado de red** (VPC, IGW, subred, tabla de
-rutas, ruta, asociación) por el módulo oficial:
+`02-vpc-module` refactoriza solo la red mediante el módulo oficial:
 
 ```hcl
 module "vpc" {
   source  = "terraform-aws-modules/vpc/aws"
   version = "6.6.1"
-  ...
+  # NAT Gateway y VPN Gateway deshabilitados
 }
 ```
 
-El módulo `vpc` 6.6.1 requiere AWS provider `>= 6.28`. Ambas implementaciones
-usan `~> 6.60`.
+El módulo crea VPC, subred pública, IGW, ruta pública y asociación. También gestiona los recursos por defecto de VPC (network ACL, tabla de rutas y security group), por lo que su Fase A planificó y añadió **13 recursos**. Un plan posterior no tuvo cambios y el estado mostró recursos `module.vpc.*`.
 
-El security group, el key pair, el EC2 y el `user_data` **se mantienen** iguales
-que en `01-manual-vpc` (salvo referencias a outputs del módulo). No se
-duplican recursos de red manuales en `02-vpc-module`.
+La Fase B del módulo planificó **2 recursos a añadir**: `aws_instance.app[0]` y `aws_vpc_security_group_ingress_rule.ssh[0]`. Conservó las mismas medidas de endurecimiento de la variante manual y también sirvió NGINX públicamente a través de la IPv4 de EC2.
 
-**No aplicar ambos directorios simultáneamente**: representan implementaciones
-alternativas/evolutivas. Flujo recomendado:
-
-1. Completa/valida `01-manual-vpc`.
-2. `terraform destroy` (en `01-manual-vpc`).
-3. Cambia a `02-vpc-module`.
-4. `terraform apply` la implementación refactorizada.
-
-No se sugiere migración de estado avanzada salvo que el ejercicio lo pida.
+No se aplican ambos directorios a la vez: son alternativas. Destruye la variante manual antes de desplegar la versión con módulo.
 
 ---
 
-## Evidencia recomendada
+## Evidencias
 
-A partir de los comentarios previos del profesor, una vez el usuario **ejecute**
-el ejercicio, se sugieren estas capturas (**no crear capturas falsas**):
+### Implementación manual — Fase A
 
-- `terraform plan` / `terraform apply` mostrando VPC/subred/ruta/SG/key pair
-  (Fase A).
-- Consola AWS: VPC / subred / tabla de rutas.
-- Security group mostrando HTTP pública + SSH con el `/32` del usuario.
-- EC2 en ejecución con su IP pública.
-- Terminal con SSH correcto a la instancia.
-- `docker ps` mostrando el contenedor `nginx`.
-- Navegador mostrando la página de NGINX vía la IP pública de la EC2.
-- `terraform destroy` final.
+#### 01. Apply de Terraform de la Fase A manual
+
+![Apply de Terraform de la Fase A manual](evidence/screenshots/01-terraform-phase-a-apply.png)
+
+La captura demuestra que el apply manual de la Fase A terminó correctamente.
+
+#### 02. VPC creada en AWS
+
+![VPC creada en AWS](evidence/screenshots/02-vpc-created.png)
+
+La captura demuestra que la VPC de la práctica existe en AWS.
+
+#### 03. Subred pública y ruta al Internet Gateway
+
+![Subred pública y ruta al Internet Gateway](evidence/screenshots/03-public-subnet-route.png)
+
+La captura demuestra la subred pública y su enrutamiento a través del IGW.
+
+#### 04. Security group de la Fase A
+
+![Security group de la Fase A](evidence/screenshots/04-security-group-phase-a.png)
+
+La captura demuestra HTTP expuesto y la ausencia de SSH globalmente abierto en la Fase A.
+
+### Implementación manual — Fase B
+
+#### 05. Apply de Terraform de la Fase B manual
+
+![Apply de Terraform de la Fase B manual](evidence/screenshots/05-terraform-phase-b-apply.png)
+
+La captura demuestra que el apply de EC2 de la Fase B manual terminó correctamente.
+
+#### 06. EC2 `t3.micro` en ejecución
+
+![EC2 t3.micro en ejecución](evidence/screenshots/06-ec2-running.png)
+
+La captura demuestra que la instancia EC2 `t3.micro` estaba en ejecución en AWS.
+
+#### 07. Docker y NGINX en ejecución en la EC2
+
+![Docker y NGINX en ejecución en la EC2](evidence/screenshots/07-docker-nginx-running.png)
+
+La captura demuestra que Docker ejecutaba NGINX y que el host EC2 recibía respuesta HTTP.
+
+#### 08. NGINX accesible públicamente
+
+![NGINX accesible públicamente](evidence/screenshots/08-nginx-browser.png)
+
+La captura demuestra que la página de bienvenida de NGINX era accesible desde un navegador.
+
+#### 09. Security group de la Fase B
+
+![Security group de la Fase B](evidence/screenshots/09-security-group-phase-b.png)
+
+La captura demuestra SSH restringido a un `/32` y HTTP público.
+
+### Limpieza manual
+
+#### 10. Destrucción de la pila manual
+
+![Destrucción de la pila manual](evidence/screenshots/10-terraform-manual-destroy.png)
+
+La captura demuestra que la pila manual completa fue destruida con Terraform.
+
+### Refactor con VPC module — Fase A
+
+#### 11. Apply de la Fase A con módulo VPC
+
+![Apply de la Fase A con módulo VPC](evidence/screenshots/11-terraform-module-phase-a-apply.png)
+
+La captura demuestra que el apply de la Fase A basada en módulo terminó correctamente.
+
+#### 12. Estado Terraform con recursos `module.vpc.*`
+
+![Estado Terraform con recursos module.vpc](evidence/screenshots/12-terraform-vpc-module-state.png)
+
+La captura demuestra que el refactor de red usa recursos gestionados por `terraform-aws-modules/vpc/aws`.
+
+### Refactor con VPC module — Fase B
+
+#### 13. Apply de EC2 de la Fase B con módulo
+
+![Apply de EC2 de la Fase B con módulo](evidence/screenshots/13-terraform-module-phase-b-apply.png)
+
+La captura demuestra que el apply de EC2 de la Fase B con módulo terminó correctamente.
+
+#### 14. NGINX público con el despliegue refactorizado
+
+![NGINX público con el despliegue refactorizado](evidence/screenshots/14-module-nginx-browser.png)
+
+La captura demuestra que el despliegue basado en módulo también sirvió NGINX públicamente.
+
+### Limpieza del módulo
+
+#### 15. Destrucción de la pila basada en módulo
+
+![Destrucción de la pila basada en módulo](evidence/screenshots/15-terraform-module-destroy.png)
+
+La captura demuestra que la pila completa basada en módulo fue destruida.
 
 ---
 
 ## Limpieza
 
-**Obligatorio**: al terminar el ejercicio ejecuta
+Para repetir la limpieza en cualquiera de las dos variantes:
 
 ```bash
 terraform destroy
+terraform state list
 ```
 
-y verifica en la consola AWS que **no quedan** instancias EC2, IP públicas
-IPv4, VPC u otros recursos facturables. Las direcciones IPv4 públicas de AWS
-pueden generar coste mientras estén asignadas a recursos, por lo que conviene
-destruir el entorno por completo al terminar.
+En la validación real se ejecutó `terraform destroy` para ambas variantes: se eliminaron 12 recursos de la pila manual y 15 de la basada en módulo. Los waiters de AWS confirmaron la terminación de EC2 y la eliminación del volumen EBS. Comprobaciones posteriores no mostraron EC2 de entrenamiento activa, VPC de entrenamiento ni key pair `lemoncode-iac-key`, y `terraform state list` quedó vacío en ambos directorios.
