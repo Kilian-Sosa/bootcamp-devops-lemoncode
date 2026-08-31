@@ -10,9 +10,9 @@ GitHub Actions. No implementa la pista de GitLab.
 | J1: pipeline Gradle declarativa | `jenkins-resources/Jenkinsfile` con Checkout, Compile y Unit Tests | Pipeline from SCM ejecutada correctamente en `*/feat/cd-exercises-solution` |
 | J2: Jenkins con DinD | `solution/jenkins/` | Compose, plugins, TLS y montaje del workspace Jenkins -> DinD validados con la Pipeline real |
 | A1: CI frontend | `.github/workflows/hangman-front-ci.yml` | Build y test locales validados con Node 24; ejecucion remota de la PR #3 correcta |
-| A2: GHCR manual | `.github/workflows/hangman-front-publish.yml` | Configuracion y build local validados; publicacion pendiente de `workflow_dispatch` tras merge |
+| A2: GHCR manual | `.github/workflows/hangman-front-publish.yml` | `workflow_dispatch` ejecutado correctamente en `master`; imagen construida y publicada en GHCR |
 | A3: E2E | `.github/workflows/hangman-e2e.yml` | API, frontend y los dos specs Cypress suministrados validados localmente y en la PR #3 |
-| A4: accion `motivate` | `.github/actions/motivate/` y workflow | Rutas de cita y fallback validadas localmente; evento `issues:labeled` pendiente de rama por defecto |
+| A4: accion `motivate` (opcional) | `.github/actions/motivate/` y workflow | Accion y rutas de cita/fallback validadas localmente; no se ejecuto `issues:labeled` porque GitHub Issues esta deshabilitado en este repositorio. A3 ya satisface el opcional requerido |
 
 Las aplicaciones de trabajo estan en `hangman-front/`, `hangman-api/` y
 `hangman-e2e/`. Son copias de `.start-code`.
@@ -35,14 +35,34 @@ Docker del host. Vease `jenkins/README.md`.
   Node 24, `npm ci`, `npm run build` y `npm test`, con `contents: read`.
 - El workflow de GHCR se dispara solo con `workflow_dispatch`, usa
   `contents: read` y `packages: write`, y publica
-  `ghcr.io/kilian-sosa/hangman-front`. El nombre es estatico y en minusculas:
-  no depende de que `github.repository_owner` ya venga normalizado.
+  `ghcr.io/kilian-sosa/hangman-front`. Se ejecuto correctamente sobre `master`,
+  autenticando en GHCR y publicando la imagen. El nombre es estatico y en
+  minusculas: no depende de que `github.repository_owner` ya venga normalizado.
 - El E2E crea las imagenes, arranca API en `3001:3000` y frontend en
   `8080:8080`, espera respuestas HTTP, ejecuta `npx cypress run` y limpia
   siempre contenedores y red.
 - `motivate-issue.yml` escucha `issues:labeled` y exige que la etiqueta anadida
   sea exactamente `motivate`. La accion JavaScript usa Node 24, registra el
-  mensaje y tiene fallback local si falla type.fit.
+  mensaje y tiene fallback local si falla type.fit. Es un ejercicio opcional:
+  no se ejecuto el evento remoto porque GitHub Issues esta deshabilitado; A3 ya
+  cumple el opcional requerido.
+
+## Evidencias
+
+### Publicacion del frontend en GHCR
+
+![Workflow manual de publicacion en GHCR](evidence/screenshots/01-ghcr-publish-workflow.png)
+
+La captura demuestra que `Frontend Publish (GHCR)` se ejecuto mediante
+`workflow_dispatch` sobre `master` y completo correctamente el login, build y
+push de la imagen.
+
+### Imagen disponible en GHCR
+
+![Descarga de hangman-front desde GHCR](evidence/screenshots/02-ghcr-hangman-front-package.png)
+
+La captura demuestra que `ghcr.io/kilian-sosa/hangman-front:latest` se pudo
+descargar correctamente desde GHCR.
 
 ## Ajustes minimos a las copias ejecutables
 
