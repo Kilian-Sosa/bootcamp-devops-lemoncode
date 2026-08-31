@@ -19,6 +19,20 @@ resource "aws_instance" "app" {
 
   instance_type = var.instance_type
 
+  # T3 instances default to Unlimited CPU credits, which can incur additional
+  # usage. Standard mode is sufficient for this short training workload.
+  credit_specification {
+    cpu_credits = "standard"
+  }
+
+  # Keep the root disk deliberately small and predictable for the lab.
+  root_block_device {
+    volume_type           = "gp3"
+    volume_size           = 8
+    encrypted             = true
+    delete_on_termination = true
+  }
+
   subnet_id                   = aws_subnet.public.id
   vpc_security_group_ids      = [aws_security_group.app.id]
   associate_public_ip_address = true
