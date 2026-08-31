@@ -1,7 +1,9 @@
 # Solucion de Continuous Delivery
 
-Esta entrega usa la pista de **Jenkins** y completa los dos opcionales de
-GitHub Actions. No implementa la pista de GitLab.
+Esta entrega usa la pista de **Jenkins** y completa A3 como ejercicio opcional
+de GitHub Actions. A4 tambien esta implementado, aunque no se valida mediante
+evento remoto porque GitHub Issues esta deshabilitado. No implementa la pista
+de GitLab.
 
 ## Matriz de entrega
 
