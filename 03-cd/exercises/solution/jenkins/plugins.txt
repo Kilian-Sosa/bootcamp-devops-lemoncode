@@ -1,0 +1,16 @@
+# Plugins a instalar via jenkins-plugin-cli.
+# Formato: <id>:<version> o solo <id> (resuelve la ultima compatible).
+#
+# IDs exactos de los plugins pedidos por el ejercicio 2:
+#   docker          -> "Docker"            = ID: docker-plugin
+#   Docker Pipeline -> "Docker Pipeline"   = ID: docker-workflow
+# (jenkins-plugin-cli instala las dependencias transitivas como docker-commons,
+#  docker-java-api, bouncycastle, etc.)
+#
+# No se pinnearon versiones concretas para que jenkins-plugin-cli resuelva
+# versiones compatibles con el Jenkins LTS usado (jenkins/jenkins:lts-jdk17).
+docker-plugin
+docker-workflow
+configuration-as-code
+git
+workflow-aggregator

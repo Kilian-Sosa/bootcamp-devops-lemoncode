@@ -1,0 +1,70 @@
+# ---------------------------------------------------------------------------
+# compose.yml - Jenkins + Docker-in-Docker (DinD)
+#
+# Arquitectura:
+#   - `dind`:  contenedor `docker:dind` que levanta un demonio Docker real
+#              dentro del contenedor, exponiendolo por TLS. NO monta el socket
+#              del host (/var/run/docker.sock): eso NO seria DinD.
+#   - `jenkins`: imagen construida con jenkins.Dockerfile. Lleva el CLI de
+#              Docker y los plugins Docker / Docker Pipeline.
+#
+# Conexion entre ambos:
+#   - El demonio DinD crea certificados TLS en /certs/client.
+#   - Jenkins monta el volumen `jenkins-dind-certs` y usa:
+#       DOCKER_HOST=tcp://docker:2376
+#       DOCKER_TLS_VERIFY=1
+#       DOCKER_CERT_PATH=/certs/client
+#   El alias de red `docker` coincide con el nombre TLS del certificado de
+#   DinD; asi Jenkins controla el daemon de `dind` de forma segura.
+#
+# Toda la comunicacion va por la red `jenkins-net` (dedicada).
+# ---------------------------------------------------------------------------
+name: jenkins-cd-exercise
+
+services:
+  dind:
+    image: docker:24.0.7-dind
+    privileged: true
+    # IMPORTANTE: en DinD, el almacenamiento en overlay2 dentro de un contenedor
+    # puede fallar; se fuerza vfs para entornos anidados (Docker Desktop / WSL).
+    environment:
+      - DOCKER_TLS_CERTDIR=/certs
+      - DOCKER_DRIVER=vfs
+    volumes:
+      - dind-data:/var/lib/docker
+      - jenkins-dind-certs:/certs
+      # Docker Pipeline creates runner containers through this remote daemon.
+      # It needs the exact Jenkins workspace path available for bind mounts.
+      - jenkins-home:/var/jenkins_home
+    networks:
+      jenkins-net:
+        aliases:
+          - docker
+
+  jenkins:
+    build:
+      context: .
+      dockerfile: jenkins.Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      # El alias `docker` coincide con el certificado TLS generado por DinD.
+      - DOCKER_HOST=tcp://docker:2376
+      - DOCKER_TLS_VERIFY=1
+      - DOCKER_CERT_PATH=/certs/client
+    volumes:
+      - jenkins-home:/var/jenkins_home
+      - jenkins-dind-certs:/certs:ro
+    depends_on:
+      - dind
+    networks:
+      - jenkins-net
+
+volumes:
+  dind-data:
+  jenkins-home:
+  jenkins-dind-certs:
+
+networks:
+  jenkins-net:
+    driver: bridge
