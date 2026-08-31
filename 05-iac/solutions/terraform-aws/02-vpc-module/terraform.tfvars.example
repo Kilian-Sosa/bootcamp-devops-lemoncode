@@ -1,0 +1,21 @@
+# Copia este fichero a terraform.tfvars y ajusta los valores.
+# NO subas terraform.tfvars a Git (esta ignorado).
+
+aws_region          = "eu-west-1"
+vpc_cidr            = "10.0.0.0/16"
+public_subnet_cidr  = "10.0.1.0/24"
+
+# Fase A (pasos 1-4): mantener false para no crear EC2.
+# Fase B (pasos 5-7): cambiar a true (requiere ssh_cidr != null).
+create_instance     = false
+
+# Ruta local a tu clave PUBLICA SSH (la privada nunca entra en Terraform state).
+ssh_public_key_path = "~/.ssh/lemoncode-iac.pub"
+
+# Tu IP publica en formato /32. Ejemplo: 203.0.113.10/32
+# null = no se crea la regla SSH.
+ssh_cidr            = null
+
+# Conservador para cuentas nuevas creadas despues del 2025-07-15.
+# Verifica elegibilidad Free Tier / creditos antes de apply.
+instance_type       = "t3.micro"
