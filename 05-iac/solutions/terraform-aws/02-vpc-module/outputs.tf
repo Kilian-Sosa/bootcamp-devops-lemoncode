@@ -36,7 +36,7 @@ output "public_ip" {
 output "ssh_command" {
   description = "Comando SSH sugerido (null si create_instance = false)."
   # Example: ssh -i ~/.ssh/lemoncode-iac ec2-user@<PUBLIC_IP>
-  value = var.create_instance ? "ssh -i ${var.ssh_public_key_path} ec2-user@${aws_instance.app[0].public_ip}" : null
+  value = var.create_instance ? "ssh -i ${trimsuffix(var.ssh_public_key_path, ".pub")} ec2-user@${aws_instance.app[0].public_ip}" : null
 }
 
 output "http_url" {

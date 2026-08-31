@@ -1,23 +1,33 @@
 ############################################
-# EC2 instance (cost-safe, conditional creation)
+# Amazon Linux 2023 AMI
 ############################################
 
-# EC2 is NOT created by default. With create_instance = false only the
-# VPC/network/SG/key pair are created (Fase A). The instance is only created
-# when the user explicitly sets create_instance = true (Fase B).
-#
-# We use count for conditional creation so the outputs can safely return null
-# when no instance exists.
+data "aws_ssm_parameter" "al2023_ami" {
+  count = var.create_instance ? 1 : 0
+
+  name = "/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64"
+}
 resource "aws_instance" "app" {
   count = var.create_instance ? 1 : 0
 
-  ami = "resolve:ssm:/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64"
+  ami = data.aws_ssm_parameter.al2023_ami[0].value
   # SSM AMI reference: avoids a stale hard-coded AMI ID that becomes invalid
   # over time. The AWS provider resolves this to the current Amazon Linux 2023
   # x86_64 AMI at apply time. We deliberately avoid a data source lookup for
   # the AMI in the default infrastructure-only phase.
 
   instance_type = var.instance_type
+
+  credit_specification {
+    cpu_credits = "standard"
+  }
+
+  root_block_device {
+    volume_type           = "gp3"
+    volume_size           = 8
+    encrypted             = true
+    delete_on_termination = true
+  }
 
   # Use the VPC module's public subnet output for the EC2 subnet.
   subnet_id                   = module.vpc.public_subnets[0]
