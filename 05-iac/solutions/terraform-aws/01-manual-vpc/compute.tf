@@ -1,17 +1,18 @@
 ############################################
-# EC2 instance (cost-safe, conditional creation)
+# Amazon Linux 2023 AMI
 ############################################
 
-# EC2 is NOT created by default. With create_instance = false only the
-# VPC/network/SG/key pair are created (Fase A). The instance is only created
-# when the user explicitly sets create_instance = true (Fase B).
-#
-# We use count for conditional creation so the outputs can safely return null
-# when no instance exists.
+# AWS publishes the latest AL2023 AMI ID through a public SSM parameter.
+# Resolve it explicitly so aws_instance receives a real ami-* ID.
+data "aws_ssm_parameter" "al2023_ami" {
+  count = var.create_instance ? 1 : 0
+
+  name = "/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64"
+}
 resource "aws_instance" "app" {
   count = var.create_instance ? 1 : 0
 
-  ami = "resolve:ssm:/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64"
+  ami = data.aws_ssm_parameter.al2023_ami[0].value
   # SSM AMI reference: avoids a stale hard-coded AMI ID that becomes invalid
   # over time. The AWS provider resolves this to the current Amazon Linux 2023
   # x86_64 AMI at apply time. We deliberately avoid a data source lookup for
