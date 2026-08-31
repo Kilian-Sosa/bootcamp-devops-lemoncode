@@ -1,0 +1,21 @@
+# Ejercicio 5.1 — Prometheus + FastAPI app
+# Validado localmente el 2026-08-27 contra el montaje ASGI /metrics/.
+
+docker compose ps
+monitoring-app-map         Up  0.0.0.0:8000->8000/tcp
+monitoring-app-prometheus  Up  0.0.0.0:9090->9090/tcp
+
+GET /api/items/
+[{"name":"Foo1","description":null,"price":"12","tax":null},{"name":"Foo2","description":null,"price":"13","tax":null},{"name":"Foo3","description":null,"price":"15","tax":null}]
+
+GET /metrics/
+HTTP 200; process_resident_memory_bytes presente
+
+GET /api/v1/targets
+job=app_map, instance=app:8000, health=up, scrapeUrl=http://app:8000/metrics/, lastError=""
+
+process_resident_memory_bytes{job="app_map"}
+52387840
+
+rate(process_cpu_seconds_total{job="app_map"}[1m])
+0

@@ -1,0 +1,22 @@
+# Ejercicio 5.2 — Jaeger / HotROD baseline
+# Ejecución local: 2026-08-27. Ráfaga: 24 peticiones concurrentes a
+# /dispatch?customer=123.
+
+docker compose -f compose.yml ps
+monitoring-hotrod-baseline  Up  0.0.0.0:8080->8080/tcp
+monitoring-jaeger-baseline  Up  0.0.0.0:16686->16686/tcp
+
+Resultados del cliente
+requests_200=24/24
+latency_ms_min=728 median=3138 max=5156.5
+
+Resultados extraídos de Jaeger
+trace_id=7164652cad5eceba8e80429013e41860
+mysql_us_min=275623 max=4692875
+mutex_waiters_max=14
+route_max_concurrency=3
+
+Interpretación
+- Los eventos `Acquired lock; N transactions waiting behind` de los spans
+  MySQL alcanzaron N=14: el mutex serializa consultas bajo carga.
+- `route_max_concurrency=3` coincide con el worker pool por defecto de route.
